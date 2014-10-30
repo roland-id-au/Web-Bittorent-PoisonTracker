@@ -1,29 +1,29 @@
 <?php
 class BEncodedListCollectionIterator implements Iterator {
-	private $Values;
+	private $values;
 	
-	public function __construct($Values){
-		$this->Values = $Values;
+	public function __construct($values) {
+		$this->values = $values;
 	}
 	
-	public function rewind(){
-		reset($this->Values);
+	public function rewind() {
+		reset ( $this->values );
 	}
 	
-	public function current(){
-		return current($this->Values);
+	public function current() {
+		return current ( $this->values );
 	}
 	
-	public function key(){
-		return key($this->Values);
+	public function key() {
+		return key ( $this->values );
 	}
 	
-	public function next(){
-		return next($this->Values);
+	public function next() {
+		return next ( $this->values );
 	}
 	
-	public function valid(){
-		return $this->current() == false ? false : true;
+	public function valid() {
+		return $this->current () == false ? false : true;
 	}
 }
 ?>

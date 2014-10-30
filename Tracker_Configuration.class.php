@@ -1,13 +1,26 @@
 <?php
+require_once 'Tracker_ConfigurationBase.class.php';
+
+/**
+ * Represents the top level of an INI file
+ *
+ */
 class Tracker_Configuration extends Tracker_ConfigurationBase {
-	public function __construct($IniPath){
-		if(is_readable($IniPath)){
-			$Sections = parse_ini_file($IniPath, true);
-			$Buffer = array();
-			foreach($Sections as $Key=>$Section){
-				$Buffer[ucfirst($Key)] = $Section;
+	
+	/**
+	 * Loads the INI file from @param $iniPath
+	 * 
+	 * @param string $iniPath
+	 */
+	public function __construct($iniPath) {
+		if (is_readable ( $iniPath )) {
+			$configurationSections = parse_ini_file ( $iniPath, true );
+			$buffer = array ();
+			foreach ( $configurationSections as $key => $configurationSection ) {
+				$buffer [ucfirst ( $key )] = $configurationSection;
 			}
-			parent::__construct($Buffer);
+			parent::__construct ( $buffer );
 		}
 	}
 }
+?>

@@ -1,66 +1,123 @@
 <?php
+require_once 'Tracker_Exception.class.php';
+
+/**
+ * abstract request handler
+ *
+ */
 abstract class Tracker_Request {
 	
-	final protected function RequireParameters(){
-		$RequiredParameters = func_get_args();
-		foreach($RequiredParameters as $RequiredParameter){
-			if(!array_key_exists($RequiredParameter, $_REQUEST)){
-				throw new Tracker_Exception("Missing request parameter \"$RequiredParameter\"");
+	/**
+	 * Checks whether the specified parameters exist for the request
+	 *
+	 */
+	final protected function requireParameters() {
+		$requiredParameters = func_get_args ();
+		foreach ( $requiredParameters as $RequiredParameter ) {
+			if (! array_key_exists ( $RequiredParameter, $_REQUEST )) {
+				throw new Tracker_Exception ( "Missing request parameter \"$RequiredParameter\"" );
 			}
 		}
 	}
 	
-	protected function MapParameter($Parameter){
-		if(array_key_exists($Parameter, $_REQUEST)){
+	/**
+	 * Maps a request parameter to an alternate interpretation
+	 *
+	 * @param string $parameter
+	 * @return string
+	 */
+	protected function mapParameter($parameterName) {
+		if (array_key_exists ( $parameterName, $_REQUEST )) {
+			// No reliable way to count string as byte arrray in PHP
 			//if(strlen(urldecode($_REQUEST[$Parameter])) == 20){
 			//	return urldecode($_REQUEST[$Parameter]);
 			//}else{
 			//	return $_REQUEST[$Parameter];
 			//}
-			return $_REQUEST[$Parameter];
-		}else{
-			throw new Tracker_Exception("Missing request parameter \"$Parameter\"");
+			return $_REQUEST [$parameterName];
+		} else {
+			throw new Tracker_Exception ( "Missing request parameter \"$parameterName\"" );
 		}
 	}
 	
-	protected function GetParameter($Parameter, $DefaultValue = null){
-		if(array_key_exists($Parameter, $_REQUEST)){
+	/**
+	 * Gets the specified request parameter
+	 *
+	 * @param string $parameterName
+	 * @param string $defaultValue
+	 * @return string
+	 */
+	protected function getParameter($parameterName, $defaultValue = null) {
+		if (array_key_exists ( $parameterName, $_REQUEST )) {
 			//if(strlen(urldecode($_REQUEST[$Parameter])) == 20){
 			//	return urldecode($_REQUEST[$Parameter]);
 			//}else{
 			//	return $_REQUEST[$Parameter];
 			//}
-			return $_REQUEST[$Parameter];
-		}else if(!is_null($DefaultValue)){
-			return $DefaultValue;
-		}else{
-			throw new Tracker_Exception("Missing request parameter \"$Parameter\"");
+			return $_REQUEST [$parameterName];
+		} else if (! is_null ( $defaultValue )) {
+			return $defaultValue;
+		} else {
+			throw new Tracker_Exception ( "Missing request parameter \"$parameterName\"" );
 		}
 	}
 	
-	final public function GetHash($Parameter){
-		return md5($this->__get($Parameter));
+	/**
+	 * Gets a hash code for a request parameter
+	 *
+	 * @param string $parameterName
+	 * @return string
+	 */
+	final public function getHash($parameterName) {
+		return md5 ( $this->__get ( $parameterName ) );
 	}
 	
-	final public function __get($Parameter){
-		return $this->MapParameter($Parameter);
+	/**
+	 * Overloads getter to return request parameters
+	 *
+	 * @param string $parameterName
+	 * @return string
+	 */
+	final public function __get($parameterName) {
+		return $this->mapParameter ( $parameterName );
 	}
 	
-	final public function GetQueryString(){
-		return $_SERVER['QUERY_STRING'];
+	/**
+	 * Gets the request query string
+	 *
+	 * @return string
+	 */
+	final public function getQueryString() {
+		return $_SERVER ['QUERY_STRING'];
 	}
 	
-	final public function HasParameter($Parameter){
-		try{
-			$this->MapParameter($Parameter);
-		}catch(Exception $e){
+	/**
+	 * Checks whether the parameter exists for the request
+	 *
+	 * @param string $parameterName
+	 * @return bool
+	 */
+	final public function hasParameter($parameterName) {
+		try {
+			$this->mapParameter ( $parameterName );
+		} catch ( Exception $e ) {
 			return false;
 		}
 		return true;
 	}
 	
-	public function GetResponse(){}
+	/**
+	 * Gets the response for the request
+	 *
+	 */
+	public function getResponse() {
+	}
 	
-	public function GetIdentifier(){}
+	/**
+	 * Returns a unique hash code for the request
+	 *
+	 */
+	public function getHashCode() {
+	}
 }
 ?>

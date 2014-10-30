@@ -1,127 +1,136 @@
 <?php
+require_once 'BEncodedDictionary.class.php';
+require_once 'BEncodedInteger.class.php';
+require_once 'BEncodedListCollection.class.php';
+require_once 'BEncodedListCollectionIterator.class.php';
+require_once 'BEncodedString.class.php';
+require_once 'BEncodingInvalidValueException.class.php';
+require_once 'BEncodingParserException.class.php';
+require_once 'IBEncodedValue.php';
+
 class BEncodedList extends BEncodedListCollection implements IBEncodedValue {
 	
-	public function __construct($Values = null){
-		parent::__construct();
-		if(!is_null($Values)){
-			foreach($Values as $Value){
-				if($Value instanceof IBEncodedValue){
-					$this->Add($Value);
-				}elseif(is_numeric($Value)){
-					$this->Add(new BEncodedInteger($Value));
-				}elseif(is_string($Value)){
-					$this->Add(new BEncodedString($Value));
-				}elseif(is_array($Value)){
-						if(is_numeric(implode('', array_keys($Value)))){
-							$this->Add(new BEncodedList($Value));
-						}else{
-							$this->Add(new BEncodedDictionary($Value));
-						}
-				}else{
-					throw new BEncodingInvalidValueException(__CLASS__.' cannot be created with '.gettype($Values).' as a default value');
+	public function __construct($values = null) {
+		parent::__construct ();
+		if (! is_null ( $values )) {
+			foreach ( $values as $value ) {
+				if ($value instanceof IBEncodedValue) {
+					$this->add ( $value );
+				} elseif (is_numeric ( $value )) {
+					$this->add ( new BEncodedInteger ( $value ) );
+				} elseif (is_string ( $value )) {
+					$this->add ( new BEncodedString ( $value ) );
+				} elseif (is_array ( $value )) {
+					if (is_numeric ( implode ( '', array_keys ( $value ) ) )) {
+						$this->add ( new BEncodedList ( $value ) );
+					} else {
+						$this->add ( new BEncodedDictionary ( $value ) );
+					}
+				} else {
+					throw new BEncodingInvalidValueException ( __CLASS__ . ' cannot be created with ' . gettype ( $values ) . ' as a default value' );
 				}
 			}
 		}
 	}
 	
-	public function FromString($BEncodedString){
-		$Offset = 0;
-		$this->Parse($BEncodedString, $Offset);
-		if($Offset != strlen($BEncodedString)){
-			throw new BEncodingParserException('Unknown error parsing '.__CLASS__, $BEncodedString, $Offset);		
+	public function fromString($bEncodedString) {
+		$offset = 0;
+		$this->parse ( $bEncodedString, $offset );
+		if ($offset != strlen ( $bEncodedString )) {
+			throw new BEncodingParserException ( 'Unknown error parsing ' . __CLASS__, $bEncodedString, $offset );
 		}
 	}
 	
-	public function TryParse($BEncodedString){
-		try{
-			$this->FromString($BEncodedString);
-		}catch(Exception $e){
+	public function tryParse($bEncodedString) {
+		try {
+			$this->fromString ( $bEncodedString );
+		} catch ( Exception $e ) {
 			return false;
 		}
 		return true;
 	}
 	
-	public function Parse(&$BEncodedString, &$Offset){
-		if($BEncodedString{$Offset} == 'l'){
-			$Offset += 1;
-			$Value = null;
-			while((substr($BEncodedString, $Offset, 1) === 'e') === false){
-				$TmpOffset = $Offset;
-				switch(true){
-					case $BEncodedString{$Offset} === 'd':
-						try{
-							$Value = new BEncodedDictionary();
-							$Value->Parse($BEncodedString, $TmpOffset);
-						}catch(BEncodingParserException $e){
-							throw new BEncodingParserException(__CLASS__.' expected BEncodedDictionary at offset '.$Offset, $BEncodedString, $Offset, $e);
+	public function parse(&$bEncodedString, &$offset) {
+		if ($bEncodedString {$offset} == 'l') {
+			$offset += 1;
+			$value = null;
+			while ( (substr ( $bEncodedString, $offset, 1 ) === 'e') === false ) {
+				$tmpOffset = $offset;
+				switch (true) {
+					case $bEncodedString {$offset} === 'd' :
+						try {
+							$value = new BEncodedDictionary ( );
+							$value->parse ( $bEncodedString, $tmpOffset );
+						} catch ( BEncodingParserException $e ) {
+							throw new BEncodingParserException ( __CLASS__ . ' expected BEncodedDictionary at offset ' . $offset, $bEncodedString, $offset, $e );
 						}
-						$Offset = $TmpOffset;
+						$offset = $tmpOffset;
 						break;
-					case $BEncodedString{$Offset} === 'l':
-						try{
-							$Value = new BEncodedList();
-							$Value->Parse($BEncodedString, $TmpOffset);
-						}catch(BEncodingParserException $e){
-							throw new BEncodingParserException(__CLASS__.' expected BEncodedList at offset '.$Offset, $BEncodedString, $Offset, $e);
+					case $bEncodedString {$offset} === 'l' :
+						try {
+							$value = new BEncodedList ( );
+							$value->parse ( $bEncodedString, $tmpOffset );
+						} catch ( BEncodingParserException $e ) {
+							throw new BEncodingParserException ( __CLASS__ . ' expected BEncodedList at offset ' . $offset, $bEncodedString, $offset, $e );
 						}
-						$Offset = $TmpOffset;
+						$offset = $tmpOffset;
 						break;
-					case $BEncodedString{$Offset} === 'i':
-						try{
-							$Value = new BEncodedInteger();
-							$Value->Parse($BEncodedString, $TmpOffset);
-						}catch(BEncodingParserException $e){
-							throw new BEncodingParserException(__CLASS__.' expected BEncodedInteger at offset '.$Offset, $BEncodedString, $Offset, $e);
+					case $bEncodedString {$offset} === 'i' :
+						try {
+							$value = new BEncodedInteger ( );
+							$value->parse ( $bEncodedString, $tmpOffset );
+						} catch ( BEncodingParserException $e ) {
+							throw new BEncodingParserException ( __CLASS__ . ' expected BEncodedInteger at offset ' . $offset, $bEncodedString, $offset, $e );
 						}
-						$Offset = $TmpOffset;
+						$offset = $tmpOffset;
 						break;
-					case is_numeric($BEncodedString{$Offset}):
-						try{
-							$Value = new BEncodedString();
-							$Value->Parse($BEncodedString, $TmpOffset);
-						}catch(BEncodingParserException $e){
-							throw new BEncodingParserException(__CLASS__.' expected BEncodedString at offset '.$Offset, $BEncodedString, $Offset, $e);
+					case is_numeric ( $bEncodedString {$offset} ) :
+						try {
+							$value = new BEncodedString ( );
+							$value->parse ( $bEncodedString, $tmpOffset );
+						} catch ( BEncodingParserException $e ) {
+							throw new BEncodingParserException ( __CLASS__ . ' expected BEncodedString at offset ' . $offset, $bEncodedString, $offset, $e );
 						}
-						$Offset = $TmpOffset;
+						$offset = $tmpOffset;
 						break;
-					default:
-						throw new Exception(__CLASS__.' encountered unexpected token: "'.$BEncodedString{$Offset});
+					default :
+						throw new Exception ( __CLASS__ . ' encountered unexpected token: "' . $bEncodedString {$offset} );
 				}
-				$this[] = $Value;
+				$this [] = $value;
 			}
-		}else{
-			throw new BEncodingParserException(__CLASS__.' encountered unrecognised encoding', $BEncodedString, $Offset);
+		} else {
+			throw new BEncodingParserException ( __CLASS__ . ' encountered unrecognised encoding', $bEncodedString, $offset );
 		}
-		$Offset += 1;
+		$offset += 1;
 	}
 	
-	public function Encode(){
-		$Encode = 'l';
-		foreach($this->Values as $Value){
-			$Encode .= $Value->Encode();
+	public function encode() {
+		$output = 'l';
+		foreach ( $this->values as $value ) {
+			$output .= $value->encode ();
 		}
-		$Encode .= 'e';
-		return $Encode;
+		$output .= 'e';
+		return $output;
 	}
 	
-	public function ToArray(){
-		$ArrayValues = array();
-		foreach($this->Values as $Value){
-			if($Value instanceof BEncodedList || $Value instanceof BEncodedDictionary){
-				$ArrayValues[] = $Value->ToArray();
-			}else{
-				$ArrayValues[] = $Value->Value;
+	public function toArray() {
+		$items = array ();
+		foreach ( $this->values as $item ) {
+			if ($item instanceof BEncodedList || $item instanceof BEncodedDictionary) {
+				$items [] = $item->toArray ();
+			} else {
+				$items [] = $item->getValue ();
 			}
 		}
-		return $ArrayValues;
+		return $items;
 	}
 	
-	public function ToString(){
-		return $this->__toString();
+	public function toString() {
+		return $this->__toString ();
 	}
 	
-	public function __toString(){
-		return __CLASS__.'['.$this->count().']';
+	public function __toString() {
+		return __CLASS__ . '[' . $this->count () . ']';
 	}
 }
 ?>

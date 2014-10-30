@@ -1,33 +1,55 @@
 <?php
+require_once 'Tracker_Data.class.php';
+
+/**
+ * Represents a tracker peer
+ *
+ */
 class Tracker_Peer {
-	public $Id;
-	public $RawId;
-	public $TorrentHash;
-	public $Ip;
-	public $Port;
-	public $Added;
-	public $Updated;
-	public $Uploaded;
-	public $Downloaded;
-	public $Left;
+	public $id;
+	public $rawId;
+	public $torrentHash;
+	public $ip;
+	public $port;
+	public $added;
+	public $updated;
+	public $uploaded;
+	public $downloaded;
+	public $left;
 	
-	public function __construct($Id, $RawId, $TorrentHash, $Ip, $Port, $Uploaded, $Downloaded, $Left){
-		$this->Id = $Id;
-		$this->RawId = $RawId;
-		$this->TorrentHash = $TorrentHash;
-		$this->Ip = $Ip;
-		$this->Port = intval($Port);
-		$this->Uploaded = intval($Uploaded);
-		$this->Downloaded = intval($Downloaded);
-		$this->Left = intval($Left);	
+	/**
+	 * ctor
+	 *
+	 * @param string $id
+	 * @param string $rawId
+	 * @param string $torrentHash
+	 * @param string $ip
+	 * @param int $port
+	 * @param int $uploaded
+	 * @param int $downloaded
+	 * @param int $left
+	 */
+	public function __construct($id, $rawId, $torrentHash, $ip, $port, $uploaded, $downloaded, $left) {
+		$this->id = $id;
+		$this->rawId = $rawId;
+		$this->torrentHash = $torrentHash;
+		$this->ip = $ip;
+		$this->port = intval ( $port );
+		$this->uploaded = intval ( $uploaded );
+		$this->downloaded = intval ( $downloaded );
+		$this->left = intval ( $left );
 	}
 	
-	public function Save(){
-		Tracker_Data::SetPeer($this);
+	/**
+	 * Saves the peer
+	 *
+	 */
+	public function save() {
+		Tracker_Data::setPeer ( $this );
 	}
 	
-	public function __toString(){
-		return $this->Id;
+	public function __toString() {
+		return $this->id;
 	}
 }
 ?>

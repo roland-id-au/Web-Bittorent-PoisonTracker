@@ -1,121 +1,131 @@
 <?php
+require_once 'BEncodedList.class.php';
+require_once 'BEncodedDictionary.class.php';
+require_once 'Tracker.class.php';
+require_once 'Tracker_Torrent.class.php';
+require_once 'Tracker_Request.class.php';
+require_once 'Tracker_Data.class.php';
+
+/**
+ * Tracker announce request handler
+ *
+ */
 class Tracker_AnnounceRequest extends Tracker_Request {
-	private $Tracker;
+	private $tracker;
 	
-	public function __construct(Tracker $Tracker){
-		$this->Tracker = $Tracker;
-		$this->RequireParameters('info_hash', 'peer_id', 'port', 'uploaded', 'downloaded', 'left');
+	/**
+	 * ctor
+	 *
+	 * @param Tracker $tracker
+	 */
+	public function __construct(Tracker $tracker) {
+		$this->tracker = $tracker;
+		$this->requireParameters ( 'info_hash', 'peer_id', 'port', 'uploaded', 'downloaded', 'left' );
 	}
-
-	protected function MapParameter($Parameter){
-		switch($Parameter){
-			case 'ip':
-				return $this->GetParameter('ip', $_SERVER['REMOTE_ADDR']);
+	
+	/**
+	 * Overrides Tracker_Request::mapParameter
+	 * Maps a request parameter to an alternate interpretation
+	 *
+	 * @param string $parameter
+	 * @return string
+	 */
+	protected function mapParameter($parameter) {
+		switch ($parameter) {
+			case 'ip' :
+				return $this->getParameter ( 'ip', $_SERVER ['REMOTE_ADDR'] );
 				break;
-			case 'event':
-				return $this->GetParameter('event', 'none');
+			case 'event' :
+				return $this->getParameter ( 'event', 'none' );
 				break;
-			case 'compact':
-				return $this->GetParameter('compact', false);
+			case 'compact' :
+				return $this->getParameter ( 'compact', false );
 				break;
-			case 'num_want':
-				$NumWant = $this->GetParameter('num_want', 30);
-				if($NumWant > 30){return 30;}
+			case 'numwant' :
+				$numWant = $this->getParameter ( 'numwant', 30 );
+				return $numWant < 30 ? $numWant : 30;
 				break;
-			case 'passkey':
-				return $this->GetParameter('passkey', '');
+			case 'passkey' :
+				return $this->getParameter ( 'passkey', '' );
 				break;
-			default:
-				return parent::MapParameter($Parameter);
+			default :
+				return parent::mapParameter ( $parameter );
 		}
 	}
-
-	public function GetResponse(Tracker_Torrent $Torrent){
-		$ForgeryProvider = new Tracker_ForgeryProvider($this->Tracker->Configuration->Forgery->MaximumFrequencyMultiplier, $this->Tracker->Configuration->Forgery->MinimumFrequencyMultiplier);
+	
+	/**
+	 * Gets the tracker response
+	 *
+	 * @param Tracker_Torrent $torrent
+	 * @return string
+	 */
+	public function getResponse(Tracker_Torrent $torrent) {
 		
-		$Seeds = Tracker_Data::GetTorrentSeeds($Torrent);
-		$Leeches = Tracker_Data::GetTorrentLeechers($Torrent);
-		shuffle($Seeds);
-		shuffle($Leeches);
+		$seeders = Tracker_Data::GetTorrentSeeds ( $torrent );
+		$leechers = Tracker_Data::GetTorrentLeechers ( $torrent );
+		shuffle ( $seeders );
+		shuffle ( $leechers );
 		
-		$SeedCount = $ForgeryProvider->GetNextPeerCount($this->Tracker->Configuration->Forgery->BaseSeedCount, $this->Tracker->Configuration->Forgery->MaximumSeedAmplitude, $this->Tracker->Configuration->Forgery->MinimumSeedAmplitude, $Torrent->Double1, $Torrent->Double2, $Torrent->Double3, $Torrent->Double4, $Torrent->Long1);
-		$LeechCount = $ForgeryProvider->GetNextPeerCount($this->Tracker->Configuration->Forgery->BaseLeechCount, $this->Tracker->Configuration->Forgery->MaximumLeechAmplitude, $this->Tracker->Configuration->Forgery->MinimumLeechAmplitude, $Torrent->Double3, $Torrent->Double4, $Torrent->Double1, $Torrent->Double2, $Torrent->Long1);	
+		$response = new BEncodedDictionary ( );
 		
-		$FakeSeedsRequired = count($Seeds) - $SeedCount;
-		if($FakeSeedsRequired < 0){$FakeSeedsRequired = abs($FakeSeedsRequired);}
-		$FakeLeechesRequired = count($Leeches) - $LeechCount;
-		if($FakeLeechesRequired < 0){$FakeLeechesRequired = abs($FakeLeechesRequired);}
+		$response ['interval'] = $this->tracker->Configuration->Tracker->AnnounceInterval;
+		$response ['complete'] = count ( $seeders );
+		$response ['incomplete'] = count ( $leechers );
 		
-		$NumWant = ($FakeSeedsRequired + $FakeLeechesRequired) > $this->num_want ? $this->num_want : ($FakeSeedsRequired + $FakeLeechesRequired);
-
-		$Response = new BEncodedDictionary();
+		$numWant = $this->numwant;
 		
-		$Response['interval'] = $this->Tracker->Configuration->Tracker->AnnounceInterval;
-		$Response['complete'] = $SeedCount;
-		$Response['incomplete'] = $LeechCount;
-		
-		if($this->compact){
-			$Response['peers'] = "";
-			$Buffer = array();
+		if ($this->compact) {
+			$response ['peers'] = "";
+			$buffer = array ();
 			
-			foreach($Seeds as $Seed){
-				$Buffer[] = pack("N", ip2long($Seed->Ip));
-				$Buffer[] = pack("n", $Seed->Port);
-				$NumWant--;
-			}
-
-			foreach($Leeches as $Leech){
-				$Buffer[] = pack("N", ip2long($Leech->Ip));
-				$Buffer[] = pack("n", $Leech->Port);
-				$NumWant--;
-			}
-			for($i = 0; $i < $NumWant; $i++){
-				$PeerId = null;
-				$PeerIp = null;
-				$PeerPort = null;
-				Tracker_ForgeryProvider::GetRandomPeer($this->Tracker->Configuration->Forgery->GetDelimited('ForgedHosts'), $PeerId, $PeerIp, $PeerPort);
-				$Buffer[] = pack("N", ip2long($PeerIp));
-				$Buffer[] = pack("n", $PeerPort);
-			}
-			$Response['peers'] = implode('', $Buffer);
-		}else{
-			$Response['peers'] = new BEncodedList();
-			foreach($Seeds as $Seed){
-				$PeerDictionary = new BEncodedDictionary();
-				$PeerDictionary['peer id'] = $Seed->RawId;
-				$PeerDictionary['ip'] = $Seed->Ip;
-				$PeerDictionary['port'] = $Seed->Port;
-				$Response['peers'][] = $PeerDictionary;
-				$NumWant--;
-			}
-
-			foreach($Leeches as $Leech){
-				$PeerDictionary = new BEncodedDictionary();
-				$PeerDictionary['peer id'] = $Leech->RawId;
-				$PeerDictionary['ip'] = $Leech->Ip;
-				$PeerDictionary['port'] = $Leech->Port;
-				$Response['peers'][] = $PeerDictionary;
-				$NumWant--;
+			// Respond with seeders first
+			for($i = 0, $j = count ( $seeders ); $i < $j && $numWant > 0; $i ++, $numWant --) {
+				$buffer [] = pack ( "N", ip2long ( $seeders [$i]->ip ) );
+				$buffer [] = pack ( "n", $seeders [$i]->port );
 			}
 			
-			for($i = 0; $i < $NumWant; $i++){
-				$PeerId = null;
-				$PeerIp = null;
-				$PeerPort = null;
-				Tracker_ForgeryProvider::GetRandomPeer($this->Tracker->Configuration->Forgery->GetDelimited('ForgedHosts'), $PeerId, $PeerIp, $PeerPort);		
-				$PeerDictionary = new BEncodedDictionary();
-				$PeerDictionary['peer id'] = $PeerId;
-				$PeerDictionary['ip'] = $PeerIp;
-				$PeerDictionary['port'] = $PeerPort;
-				$Response['peers'][] = $PeerDictionary;
+			// Pad response with leechers	
+			for($i = 0, $j = count ( $leechers ); $i < $j && $numWant > 0; $i ++, $numWant --) {
+				$buffer [] = pack ( "N", ip2long ( $leechers [$i]->ip ) );
+				$buffer [] = pack ( "n", $leechers [$i]->port );
+			}
+			
+			$response ['peers'] = implode ( '', $buffer );
+		
+		} else {
+			
+			$response ['peers'] = new BEncodedList ( );
+			
+			//Respond with seeders first
+			for($i = 0, $j = count ( $seeders ); $i < $j && $numWant > 0; $i ++, $numWant --) {
+				$peerDictionary = new BEncodedDictionary ( );
+				$peerDictionary ['peer id'] = $seeders [$i]->rawId;
+				$peerDictionary ['ip'] = $seeders [$i]->ip;
+				$peerDictionary ['port'] = $seeders [$i]->port;
+				$response ['peers'] [] = $peerDictionary;
+			}
+			
+			// Pad response with leechers
+			for($i = 0, $j = count ( $leechers ); $i < $j && $numWant > 0; $i ++, $numWant --) {
+				$peerDictionary = new BEncodedDictionary ( );
+				$peerDictionary ['peer id'] = $leechers [$i]->rawId;
+				$peerDictionary ['ip'] = $leechers [$i]->ip;
+				$peerDictionary ['port'] = $leechers [$i]->port;
+				$response ['peers'] [] = $peerDictionary;
 			}
 		}
-		return $Response->Encode();
+		
+		return $response->encode ();
 	}
-
-	public function GetIdentifier(){
-		$Identifier = __CLASS__.$this->num_want.$this->passkey.$this->info_hash;
-		return md5($Identifier);
+	
+	/**
+	 * Gets a unique hash code representing the request
+	 *
+	 * @return string
+	 */
+	public function getHashCode() {
+		$hash = __CLASS__ . $this->numwant . $this->passkey . $this->info_hash;
+		return md5 ( $hash );
 	}
 }
 ?>

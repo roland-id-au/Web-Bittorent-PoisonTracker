@@ -1,76 +1,78 @@
 <?php
 class BEncodedListCollection implements ArrayAccess, Countable, IteratorAggregate {
-	protected $Values;
-
-	public function __construct(){
-		$this->Values = array();
+	protected $values;
+	
+	public function __construct() {
+		$this->values = array ();
 	}
-
-	public function getIterator(){
-		return new BEncodedListCollectionIterator($this->Values);
+	
+	public function getIterator() {
+		return new BEncodedListCollectionIterator ( $this->values );
 	}
-
-	public function offsetExists($Index){
-		return array_key_exists($Index, $this->Values);
+	
+	public function offsetExists($index) {
+		return array_key_exists ( $index, $this->values );
 	}
-
-	public function offsetGet($Index){
-		if($this->offsetExists($Index)){
-			return $this->Values[$Index];
-		}else{
+	
+	public function offsetGet($index) {
+		if ($this->offsetExists ( $index )) {
+			return $this->values [$index];
+		} else {
 			return null;
 		}
 	}
-
-	public function offsetSet($Index, $Value){
-		if(is_numeric($Index) || empty($Index)){
-			if($Value instanceof IBEncodedValue || is_scalar($Value) || is_array($Value)){
-			if(!empty($Index)){
-				if($Index > ($this->count() -1)){
-					throw new BEncodingOutOfRangeException('Attempted to access out of range index '.__CLASS__.'['.$Index.']');
+	
+	public function offsetSet($index, $value) {
+		if (is_numeric ( $index ) || empty ( $index )) {
+			if ($value instanceof IBEncodedValue || is_scalar ( $value ) || is_array ( $value )) {
+				if (! empty ( $index )) {
+					if ($index > ($this->count () - 1)) {
+						throw new BEncodingOutOfRangeException ( 'Attempted to access out of range index ' . __CLASS__ . '[' . $index . ']' );
+					}
+				} elseif (empty ( $index )) {
+					$index = count ( $this->values );
 				}
-			}elseif(empty($Index)){$Index = count($this->Values);}
-			if($Value instanceof IBEncodedValue){
-				$this->Values[$Index] = $Value;
-			}elseif(is_scalar($Value)){
-				if(is_numeric($Value)){
-					$this->Values[$Index] = new BEncodedInteger($Value);
-				}else{
-					$this->Values[$Index] = new BEncodedString($Value);
+				if ($value instanceof IBEncodedValue) {
+					$this->values [$index] = $value;
+				} elseif (is_scalar ( $value )) {
+					if (is_numeric ( $value )) {
+						$this->values [$index] = new BEncodedInteger ( $value );
+					} else {
+						$this->values [$index] = new BEncodedString ( $value );
+					}
+				} elseif (is_array ( $value )) {
+					if (is_numeric ( implode ( '', array_keys ( $value ) ) )) {
+						$this->values [$index] = new BEncodedList ( $value );
+					} else {
+						$this->values [$index] = new BEncodedDictionary ( $value );
+					}
 				}
-			}elseif(is_array($Value)){
-				if(is_numeric(implode('', array_keys($Value)))){
-					$this->Values[$Index] = new BEncodedList($Value);
-				}else{
-					$this->Values[$Index] = new BEncodedDictionary($Value);
-				}
+			} else {
+				throw new BEncodingInvalidValueException ( __CLASS__ . ' values must be scalar, arrays or an instance of IBEncodedValue, ' . gettype ( $value ) . ' supplied' );
 			}
-			}else{
-				throw new BEncodingInvalidValueException(__CLASS__.' values must be scalar, arrays or an instance of IBEncodedValue, '.gettype($Value).' supplied');
-			}
-		}else{
-			throw new BEncodingInvalidIndexException(__CLASS__.' Indexes or Keys must be valid integers');
+		} else {
+			throw new BEncodingInvalidIndexException ( __CLASS__ . ' Indexes or Keys must be valid integers' );
 		}
 	}
-
-	public function offsetUnset($Index){
-		unset($this->Values[$Index]);
+	
+	public function offsetUnset($index) {
+		unset ( $this->values [$index] );
 	}
-
-	public function Clear(){
-		$this->Values = array();
+	
+	public function clear() {
+		$this->values = array ();
 	}
-
-	public function Add($Value){
-		$this[] = $Value;
+	
+	public function add($value) {
+		$this [] = $value;
 	}
-
-	public function count(){
-		return count($this->Values);
+	
+	public function count() {
+		return count ( $this->values );
 	}
-
-	public function GetHashCode(){
-		return spl_object_hash($this);
+	
+	public function getHashCode() {
+		return spl_object_hash ( $this );
 	}
 }
 ?>

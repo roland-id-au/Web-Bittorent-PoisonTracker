@@ -6,56 +6,56 @@ class BEncodedDictionaryCollection implements ArrayAccess, Countable, IteratorAg
 	 *
 	 * @var string[]
 	 */
-	protected $Keys;
+	protected $keys;
 	/**
 	 * Collection of Values for associative dictionary
 	 *
 	 * @var IBEncodedValue[]
 	 */
-	protected $Values;
-
+	protected $values;
+	
 	/**
 	 * Initialise Key Value collections
 	 *
 	 */
-	public function __construct(){
-		$this->Keys = array();
-		$this->Values = array();
+	public function __construct() {
+		$this->keys = array ();
+		$this->values = array ();
 	}
-
+	
 	/**
 	 * Implementation of IteratorAggregate
 	 *
 	 * @return BEncodedDictionaryCollectionIterator
 	 */
-	public function getIterator(){
-		return new BEncodedDictionaryCollectionIterator($this->Keys, $this->Values);
+	public function getIterator() {
+		return new BEncodedDictionaryCollectionIterator ( $this->keys, $this->values );
 	}
-
+	
 	/**
 	 * Implementation of ArrayAccess
 	 *
 	 * @param mixed $Index
 	 * @return bool
 	 */
-	public function offsetExists($Index){
-		return array_key_exists($this->GetIndexHash($Index), $this->Keys);
+	public function offsetExists($Index) {
+		return array_key_exists ( $this->getIndexHash ( $Index ), $this->keys );
 	}
-
+	
 	/**
 	 * Implementation of ArrayAccess
 	 *
 	 * @param mixed $Index
 	 * @return object
 	 */
-	public function offsetGet($Index){
-		if($this->offsetExists($Index)){
-			return $this->Values[$this->GetIndexHash($Index)];
-		}else{
+	public function offsetGet($Index) {
+		if ($this->offsetExists ( $Index )) {
+			return $this->values [$this->getIndexHash ( $Index )];
+		} else {
 			return null;
 		}
 	}
-
+	
 	/**
 	 * Implementation of ArrayAccess
 	 * This method has been modified to accept untyped input, such as (int), (string) and cast to the respective IBEncodedValue type
@@ -70,57 +70,57 @@ class BEncodedDictionaryCollection implements ArrayAccess, Countable, IteratorAg
 	 * @param mixed $Index
 	 * @param mixed $Value
 	 */
-	public function offsetSet($Index, $Value){
-		if($Value instanceof IBEncodedValue || is_scalar($Value) || is_array($Value)){
-			$Hash = $this->GetIndexHash($Index);
-			if($Index instanceof BEncodedString){
-				$this->Keys[$Hash] = $Index;
-			}else{
-				$this->Keys[$Hash] = new BEncodedString($Index);
+	public function offsetSet($index, $value) {
+		if ($value instanceof IBEncodedValue || is_scalar ( $value ) || is_array ( $value )) {
+			$hash = $this->getIndexHash ( $index );
+			if ($index instanceof BEncodedString) {
+				$this->keys [$hash] = $index;
+			} else {
+				$this->keys [$hash] = new BEncodedString ( $index );
 			}
-			if($Value instanceof IBEncodedValue){
-				$this->Values[$Hash] = $Value;
-			}elseif(is_scalar($Value)){
-				if(is_numeric($Value)){
-					$this->Values[$Hash] = new BEncodedInteger($Value);
-				}else{
-					$this->Values[$Hash] = new BEncodedString($Value);
+			if ($value instanceof IBEncodedValue) {
+				$this->values [$hash] = $value;
+			} elseif (is_scalar ( $value )) {
+				if (is_numeric ( $value )) {
+					$this->values [$hash] = new BEncodedInteger ( $value );
+				} else {
+					$this->values [$hash] = new BEncodedString ( $value );
 				}
-			}elseif(is_array($Value)){
-				if(is_numeric(implode('', array_keys($Value)))){
-					$this->Values[$Hash] = new BEncodedList($Value);
-				}else{
-					$this->Values[$Hash] = new BEncodedDictionary($Value);
+			} elseif (is_array ( $value )) {
+				if (is_numeric ( implode ( '', array_keys ( $value ) ) )) {
+					$this->values [$hash] = new BEncodedList ( $value );
+				} else {
+					$this->values [$hash] = new BEncodedDictionary ( $value );
 				}
 			}
-		}else{
-			throw new BEncodingInvalidValueException(__CLASS__.' values must be scalar, arrays or an instance of IBEncodedValue, '.gettype($Value).' supplied');
+		} else {
+			throw new BEncodingInvalidValueException ( __CLASS__ . ' values must be scalar, arrays or an instance of IBEncodedValue, ' . gettype ( $value ) . ' supplied' );
 		}
-		array_multisort($this->Keys, SORT_ASC, SORT_STRING, $this->Values);
+		array_multisort ( $this->keys, SORT_ASC, SORT_STRING, $this->values );
 	}
-
+	
 	/**
 	 * Implementation of ArrayAccess
 	 * The collection will automatically be sorted upon any call to this method
 	 * 
 	 * @param mixed $Index
 	 */
-	public function offsetUnset($Index){
-		$Hash = $this->GetIndexHash($Index);
-		unset($this->Keys[$Hash]);
-		unset($this->Values[$Hash]);
-		array_multisort($this->Keys, SORT_ASC, SORT_STRING, $this->Values);
+	public function offsetUnset($index) {
+		$hash = $this->getIndexHash ( $index );
+		unset ( $this->keys [$hash] );
+		unset ( $this->values [$hash] );
+		array_multisort ( $this->keys, SORT_ASC, SORT_STRING, $this->values );
 	}
-
+	
 	/**
 	 * Clears the collection
 	 *
 	 */
-	public function Clear(){
-		$this->Keys = array();
-		$this->Values = array();
+	public function clear() {
+		$this->keys = array ();
+		$this->values = array ();
 	}
-
+	
 	/**
 	 * Helper method to add values
 	 * Wrapper for @see BEncodedDictionaryCollection::offsetSet()
@@ -128,30 +128,30 @@ class BEncodedDictionaryCollection implements ArrayAccess, Countable, IteratorAg
 	 * @param unknown_type $Index
 	 * @param unknown_type $Value
 	 */
-	public function Add($Index, $Value){
-		$this->offsetSet($Index, $Value);
+	public function add($index, $value) {
+		$this->offsetSet ( $index, $value );
 	}
-
+	
 	/**
 	 * Implementation of Countable
 	 * Returns the number of values in this colleciton
 	 *
 	 * @return int
 	 */
-	public function count(){
-		return count($this->Values);
+	public function count() {
+		return count ( $this->values );
 	}
-
+	
 	/**
 	 * Implementation of IGenericObject
 	 * Return a unique hash for this object
 	 * 
 	 * @return string
 	 */
-	public function GetHashCode(){
-		return spl_object_hash($this);
+	public function getHashCode() {
+		return spl_object_hash ( $this );
 	}
-
+	
 	/**
 	 * Generate the hash of an index value
 	 *
@@ -159,13 +159,13 @@ class BEncodedDictionaryCollection implements ArrayAccess, Countable, IteratorAg
 	 * @param mixed $Index
 	 * @return string
 	 */
-	private function GetIndexHash($Index){
-		if(is_scalar($Index)){
-			return md5($Index);
-		}elseif($Index instanceof BEncodedString){
-			return $Index->GetHashCode();
-		}else{
-			throw new BEncodingInvalidIndexException(__CLASS__.' Indexes or Keys must be scalar or an instance of BEncodedString');
+	private function getIndexHash($index) {
+		if (is_scalar ( $index )) {
+			return md5 ( $index );
+		} elseif ($index instanceof BEncodedString) {
+			return $index->getHashCode ();
+		} else {
+			throw new BEncodingInvalidIndexException ( __CLASS__ . ' Indexes or Keys must be scalar or an instance of BEncodedString' );
 		}
 	}
 }

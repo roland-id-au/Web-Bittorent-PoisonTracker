@@ -1,13 +1,13 @@
 <?php
 final class BEncodingParserException extends BEncodingException {
-	private $BEncodedString;
-	private $Offset;
+	private $bEncodedString;
+	private $offset;
 	
-	public function __construct($Message, $BEncodedString = null, $Offset = null, Exception $InnerException = null){
-		parent::__construct($Message);
-		$this->BEncodedString = $BEncodedString;
-		$this->Offset = $Offset;
-		$this->InnerException = $InnerException;
+	public function __construct($nessage, $bEncodedString = null, $offset = null, Exception $innerException = null) {
+		parent::__construct ( $nessage );
+		$this->bEncodedString = $bEncodedString;
+		$this->offset = $offset;
+		$this->innerException = $innerException;
 	}
 }
 ?>

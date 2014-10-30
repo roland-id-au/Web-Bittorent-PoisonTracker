@@ -1,38 +1,53 @@
 <?php
+require_once 'Tracker_Data.class.php';
+
+/**
+ * Represents a tracker torrent
+ *
+ */
 class Tracker_Torrent {
-	public $Hash;
-	public $RawHash;
-	public $Added;
-	public $Updated;
-	public $Downloaded;
-	public $Double1;
-	public $Double2;
-	public $Double3;
-	public $Double4;
-	public $Long1;
+	public $hash;
+	public $rawHash;
+	public $added;
+	public $updated;
+	public $downloaded;
 	
-	public function __construct($Hash, $RawHash, $Added, $Updated, $Downloaded, $Double1, $Double2, $Double3, $Double4, $Long1){
-		$this->Hash = $Hash;
-		$this->RawHash = $RawHash;
-		$this->Added = $Added;
-		$this->Updated = $Updated;
-		$this->Downloaded = $Downloaded;
-		$this->Double1 = doubleval($Double1);
-		$this->Double2 = doubleval($Double2);
-		$this->Double3 = doubleval($Double3);
-		$this->Double4 = doubleval($Double4);
-		$this->Long1 = intval($Long1);
+	/**
+	 * ctor
+	 *
+	 * @param string $hash
+	 * @param string $rawHash
+	 * @param string $added
+	 * @param string $updated
+	 * @param int $downloaded
+	 */
+	public function __construct($hash, $rawHash, $added, $updated, $downloaded) {
+		$this->hash = $hash;
+		$this->rawHash = $rawHash;
+		$this->added = $added;
+		$this->updated = $updated;
+		$this->downloaded = $downloaded;
 	}
 	
-	public function GetAuthorisation(){
-		return Tracker_Data::GetTorrentAuthorised($this->Hash);
+	/**
+	 * Checks whether the torrent is authorised for use with the tracker
+	 *
+	 * @return unknown
+	 */
+	public function getAuthorisation() {
+		return Tracker_Data::GetTorrentAuthorised ( $this->hash );
 	}
 	
-	public function Save(){
-		Tracker_Data::SetTorrent($this);
+	/**
+	 * Saves the torrent
+	 *
+	 */
+	public function save() {
+		Tracker_Data::setTorrent ( $this );
 	}
 	
-	public function __toString(){
-		return $this->Hash;
+	public function __toString() {
+		return $this->hash;
 	}
 }
+?>

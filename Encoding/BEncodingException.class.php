@@ -1,37 +1,37 @@
 <?php
 abstract class BEncodingException extends Exception {
-	protected $InnerException;
+	protected $innerException;
 	
-	public function __construct($Message){
-		parent::__construct($Message);
-		$this->InnerException = null;
+	public function __construct($message) {
+		parent::__construct ( $message );
+		$this->innerException = null;
 	}
 	
-	public function &getInnerException(){
-		return $this->InnerException;
+	public function getInnerException() {
+		return $this->innerException;
 	}
 	
-	public function __toString($TabSpace = ''){
-		$ExceptionText = "\n";
-		$ExceptionText .= $TabSpace.get_class($this)." Thrown in\n";
-		$ExceptionText .= $TabSpace.'File: '.basename($this->getFile())."\n";
-		$ExceptionText .= $TabSpace.'Line: '.$this->getLine()."\n";
-		$ExceptionText .= $TabSpace.$this->getMessage()."\n";
-		$ExceptionText .= "\n";
-		if(is_null($this->InnerException) === false){
-			$ExceptionText .= "Inner Exception\n";
-			$ExceptionText .= $this->InnerException->__toString($TabSpace."\t\t");
-			$ExceptionText .= "\n\n";
+	public function __toString($tabSpace = '') {
+		$exceptionText = "\n";
+		$exceptionText .= $tabSpace . get_class ( $this ) . " Thrown in\n";
+		$exceptionText .= $tabSpace . 'File: ' . basename ( $this->getFile () ) . "\n";
+		$exceptionText .= $tabSpace . 'Line: ' . $this->getLine () . "\n";
+		$exceptionText .= $tabSpace . $this->getMessage () . "\n";
+		$exceptionText .= "\n";
+		if (is_null ( $this->innerException ) === false) {
+			$exceptionText .= "Inner Exception\n";
+			$exceptionText .= $this->innerException->__toString ( $tabSpace . "\t\t" );
+			$exceptionText .= "\n\n";
 		}
-		foreach($this->getTrace() as $CallTrace){
-			$ExceptionText .= $TabSpace.basename($CallTrace['file']).': '.$CallTrace['line']."\n";
-			$ExceptionText .= $TabSpace.'  ';
-			if(isset($CallTrace['class'])){
-				$ExceptionText .= $CallTrace['class'].'::';
+		foreach ( $this->getTrace () as $stackTrace ) {
+			$exceptionText .= $tabSpace . basename ( $stackTrace ['file'] ) . ': ' . $stackTrace ['line'] . "\n";
+			$exceptionText .= $tabSpace . '  ';
+			if (isset ( $stackTrace ['class'] )) {
+				$exceptionText .= $stackTrace ['class'] . '::';
 			}
-			$ExceptionText .= $CallTrace['function'].'('.implode(', ', $CallTrace['args']).")\n";
+			$exceptionText .= $stackTrace ['function'] . '(' . implode ( ', ', $stackTrace ['args'] ) . ")\n";
 		}
-		return $ExceptionText;
+		return $exceptionText;
 	}
 }
 ?>

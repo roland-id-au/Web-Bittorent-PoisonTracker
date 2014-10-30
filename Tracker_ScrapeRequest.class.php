@@ -1,146 +1,146 @@
 <?php
-class Tracker_ScrapeRequest extends Tracker_Request {
-	private $Tracker;
+require_once 'BEncodedDictionary.class.php';
+require_once 'Tracker.class.php';
+require_once 'Tracker_Request.class.php';
+require_once 'Tracker_Data.class.php';
 
-	public function __construct(Tracker $Tracker){
-		$this->Tracker = $Tracker;
+/**
+ * Tracker scrape request handler
+ *
+ */
+class Tracker_ScrapeRequest extends Tracker_Request {
+	private $tracker;
+	
+	/**
+	 * ctor
+	 *
+	 * @param Tracker $tracker
+	 */
+	public function __construct(Tracker $tracker) {
+		$this->tracker = $tracker;
 		//$this->RequireParameters('info_hash');
 	}
-
-	protected function MapParameter($Parameter){
-		switch($Parameter){
-			case 'info_hash':
-				preg_match_all('/info_hash=(.+?)(?:&|\\z){1}/', $_SERVER['QUERY_STRING'], $Matches);
-				for($i = 0; $i < count($Matches[1]); $i++){
-					if(strlen($Matches[1][$i]) != 20){
-						$Matches[1][$i] = urldecode($Matches[1][$i]);
+	
+	/**
+	 * Overrides Tracker_Request::mapParameter
+	 * Maps a request parameter to an alternate interpretation
+	 *
+	 * @param string $parameter
+	 * @return string
+	 */
+	protected function mapParameter($parameter) {
+		switch ($parameter) {
+			case 'info_hash' :
+				$matches = array ();
+				preg_match_all ( '/info_hash=(.+?)(?:&|\\z){1}/', $_SERVER ['QUERY_STRING'], $matches );
+				for($i = 0; $i < count ( $matches [1] ); $i ++) {
+					if (strlen ( $matches [1] [$i] ) != 20) {
+						$matches [1] [$i] = urldecode ( $matches [1] [$i] );
 					}
 				}
-				return $Matches[1];
+				return $matches [1];
 				break;
-			case 'passkey':
-				return $this->GetParameter('passkey', '');
+			case 'passkey' :
+				return $this->getParameter ( 'passkey', '' );
 				break;
-			default:
-				return parent::MapParameter($Parameter);
+			default :
+				return parent::mapParameter ( $parameter );
 		}
 	}
-
-	public function GetResponse(){
-		//var_dump($this->info_hash);
-		$ForgeryProvider = new Tracker_ForgeryProvider($this->Tracker->Configuration->Forgery->MaximumFrequencyMultiplier, $this->Tracker->Configuration->Forgery->MinimumFrequencyMultiplier);
-
-		$Response = new BEncodedDictionary();
-		$Response['files'] = new BEncodedDictionary();
-
-		$InfoHash = $this->info_hash;
-
-		if(is_scalar($InfoHash)){
-			$SafeInfoHash = $this->GetHash('info_hash');
-
-			if(Tracker_Data::GetTorrentExists($SafeInfoHash)){
-				$Torrent = Tracker_Data::GetTorrent($SafeInfoHash);
-
-				$SeedCount = $ForgeryProvider->GetNextPeerCount($this->Tracker->Configuration->Forgery->BaseSeedCount, $this->Tracker->Configuration->Forgery->MaximumSeedAmplitude, $this->Tracker->Configuration->Forgery->MinimumSeedAmplitude, $Torrent->Double1, $Torrent->Double2, $Torrent->Double3, $Torrent->Double4, $Torrent->Long1);
-				$LeechCount = $ForgeryProvider->GetNextPeerCount($this->Tracker->Configuration->Forgery->BaseLeechCount, $this->Tracker->Configuration->Forgery->MaximumLeechAmplitude, $this->Tracker->Configuration->Forgery->MinimumLeechAmplitude, $Torrent->Double3, $Torrent->Double4, $Torrent->Double1, $Torrent->Double2, $Torrent->Long1);
-
-				$Torrent->Save();
-
-				$FakeSeedsRequired = $SeedCount;
-				$FakeLeechesRequired = $LeechCount;
-
-				$Response['files'][$InfoHash] = new BEncodedDictionary();
-				$Response['files'][$InfoHash]['complete'] = $FakeSeedsRequired;
-				$Response['files'][$InfoHash]['downloaded'] = $Torrent->Downloaded + $FakeSeedsRequired;
-				$Response['files'][$InfoHash]['incomplete'] = $FakeLeechesRequired;
-			}else{
-				$Response['files'][$InfoHash] = new BEncodedDictionary();
-				$Response['files'][$InfoHash]['complete'] = 6969;
-				$Response['files'][$InfoHash]['downloaded'] = 6969;
-				$Response['files'][$InfoHash]['incomplete'] = 6969;
+	
+	/**
+	 * Gets the tracker response
+	 *
+	 * @param Tracker_Torrent $torrent
+	 * @return string
+	 */
+	public function getResponse() {
+		$response = new BEncodedDictionary ( );
+		$response ['files'] = new BEncodedDictionary ( );
+		
+		$infoHash = $this->info_hash;
+		
+		if (is_scalar ( $infoHash )) {
+			$safeInfoHash = $this->getHash ( 'info_hash' );
+			
+			if (Tracker_Data::GetTorrentExists ( $safeInfoHash )) {
+				$torrent = Tracker_Data::GetTorrent ( $safeInfoHash );
+				
+				$response ['files'] [$infoHash] = new BEncodedDictionary ( );
+				$response ['files'] [$infoHash] ['complete'] = Tracker_Data::getTorrentSeedCount ( $torrent );
+				$response ['files'] [$infoHash] ['downloaded'] = $torrent->downloaded;
+				$response ['files'] [$infoHash] ['incomplete'] = Tracker_Data::getTorrentLeechCount ( $torrent );
+			} else {
+				$response ['files'] [$infoHash] = new BEncodedDictionary ( );
+				$response ['files'] [$infoHash] ['complete'] = 0;
+				$response ['files'] [$infoHash] ['downloaded'] = 0;
+				$response ['files'] [$infoHash] ['incomplete'] = 0;
 			}
-		}else{
-			if(count($InfoHash) > 0){
-				foreach($InfoHash as $Hash){
-					$SafeInfoHash = md5($Hash);
-					$Response['files'][$Hash] = new BEncodedDictionary();
-
-					if(Tracker_Data::GetTorrentExists($SafeInfoHash)){
-						$Torrent = Tracker_Data::GetTorrent($SafeInfoHash);
-
-						$SeedCount = $ForgeryProvider->GetNextPeerCount($this->Tracker->Configuration->Forgery->BaseSeedCount, $this->Tracker->Configuration->Forgery->MaximumSeedAmplitude, $this->Tracker->Configuration->Forgery->MinimumSeedAmplitude, $Torrent->Double1, $Torrent->Double2, $Torrent->Double3, $Torrent->Double4, $Torrent->Long1);
-						$LeechCount = $ForgeryProvider->GetNextPeerCount($this->Tracker->Configuration->Forgery->BaseLeechCount, $this->Tracker->Configuration->Forgery->MaximumLeechAmplitude, $this->Tracker->Configuration->Forgery->MinimumLeechAmplitude, $Torrent->Double3, $Torrent->Double4, $Torrent->Double1, $Torrent->Double2, $Torrent->Long1);
-
-						$Torrent->Save();
-
-						$FakeSeedsRequired = $SeedCount;
-						$FakeLeechesRequired = $LeechCount;
-
-						$Response['files'][$Hash] = new BEncodedDictionary();
-						$Response['files'][$Hash]['complete'] = $FakeSeedsRequired;
-						$Response['files'][$Hash]['downloaded'] = $Torrent->Downloaded + $FakeSeedsRequired;
-						$Response['files'][$Hash]['incomplete'] = $FakeLeechesRequired;
-					}else{
-						$TempDouble1 = 0;
-						$TempDouble2 = 0;
-						$TempDouble3 = 0;
-						$TempDouble4 = 0;
-						$TemplLong1 = 0;
-						$SeedCount = $ForgeryProvider->GetNextPeerCount($this->Tracker->Configuration->Forgery->BaseSeedCount, $this->Tracker->Configuration->Forgery->MaximumSeedAmplitude, $this->Tracker->Configuration->Forgery->MinimumSeedAmplitude, $TempDouble1, $TempDouble2, $TempDouble3, $TempDouble4, $TemplLong1);
-						$LeechCount = $ForgeryProvider->GetNextPeerCount($this->Tracker->Configuration->Forgery->BaseLeechCount, $this->Tracker->Configuration->Forgery->MaximumLeechAmplitude, $this->Tracker->Configuration->Forgery->MinimumLeechAmplitude, $TempDouble1, $TempDouble2, $TempDouble3, $TempDouble4, $TemplLong1);
-						$FakeSeedsRequired = $SeedCount;
-						$FakeLeechesRequired = $LeechCount;
-
-						$Response['files'][$Hash] = new BEncodedDictionary();
-						$Response['files'][$Hash]['complete'] = 6969;//$FakeSeedsRequired;
-						$Response['files'][$Hash]['downloaded'] = 6969;//$FakeSeedsRequired;
-						$Response['files'][$Hash]['incomplete'] = 6969;//$FakeLeechesRequired;
+		} else {
+			if (count ( $infoHash ) > 0) {
+				foreach ( $infoHash as $hash ) {
+					$safeInfoHash = md5 ( $hash );
+					$response ['files'] [$hash] = new BEncodedDictionary ( );
+					
+					if (Tracker_Data::GetTorrentExists ( $safeInfoHash )) {
+						$torrent = Tracker_Data::GetTorrent ( $safeInfoHash );
+						
+						$response ['files'] [$hash] = new BEncodedDictionary ( );
+						$response ['files'] [$hash] ['complete'] = Tracker_Data::getTorrentSeedCount ( $torrent );
+						$response ['files'] [$hash] ['downloaded'] = $torrent->downloaded;
+						$response ['files'] [$hash] ['incomplete'] = Tracker_Data::getTorrentLeechCount ( $torrent );
+					} else {
+						$response ['files'] [$hash] = new BEncodedDictionary ( );
+						$response ['files'] [$hash] ['complete'] = 0;
+						$response ['files'] [$hash] ['downloaded'] = 0;
+						$response ['files'] [$hash] ['incomplete'] = 0;
 					}
 				}
-			}else if($this->Tracker->Configuration->Tracker->AllowFullScrape){
-				$Torrents = Tracker_Data::GetTorrents();
-				$Buffer = array();
-				foreach($Torrents as $Torrent){
-					if(!$this->Tracker->Configuration->Tracker->AllowAnonymous && !$Torrent->GetAuthorisation()){
+			} else if ($this->tracker->Configuration->Tracker->AllowFullScrape) {
+				$torrents = Tracker_Data::GetTorrents ();
+				$buffer = array ();
+				
+				foreach ( $torrents as $torrent ) {
+					if (! $this->tracker->Configuration->Tracker->AllowAnonymous && ! $torrent->getAuthorisation ()) {
 						continue;
 					}
-
-					$SeedCount = $ForgeryProvider->GetNextPeerCount($this->Tracker->Configuration->Forgery->BaseSeedCount, $this->Tracker->Configuration->Forgery->MaximumSeedAmplitude, $this->Tracker->Configuration->Forgery->MinimumSeedAmplitude, $Torrent->Double1, $Torrent->Double2, $Torrent->Double3, $Torrent->Double4, $Torrent->Long1);
-					$LeechCount = $ForgeryProvider->GetNextPeerCount($this->Tracker->Configuration->Forgery->BaseLeechCount, $this->Tracker->Configuration->Forgery->MaximumLeechAmplitude, $this->Tracker->Configuration->Forgery->MinimumLeechAmplitude, $Torrent->Double3, $Torrent->Double4, $Torrent->Double1, $Torrent->Double2, $Torrent->Long1);
-
-					//$Torrent->Save();
-
-					$FakeSeedsRequired = $SeedCount;
-					$FakeLeechesRequired = $LeechCount;
-
-					$ResponseBuffer = new BEncodedDictionary();
-					$ResponseBuffer['complete'] = $FakeSeedsRequired;
-					$ResponseBuffer['downloaded'] = $FakeSeedsRequired;
-					$ResponseBuffer['incomplete'] = $FakeLeechesRequired;
-					$Buffer[] = strlen($Torrent->RawHash).':'.$Torrent->RawHash.$ResponseBuffer->Encode();
-
-					//$Response['files'][$Torrent->RawHash] = new BEncodedDictionary();
-					//$Response['files'][$Torrent->RawHash]['complete'] = $FakeSeedsRequired;
-					//$Response['files'][$Torrent->RawHash]['downloaded'] = $Torrent->Downloaded + $FakeSeedsRequired;
-					//$Response['files'][$Torrent->RawHash]['incomplete'] = $FakeLeechesRequired;
-					//break;
+					
+					// Optimise response generation for heap
+					$ResponseBuffer = new BEncodedDictionary ( );
+					$ResponseBuffer ['complete'] = Tracker_Data::getTorrentSeedCount ( $torrent );
+					$ResponseBuffer ['downloaded'] = $torrent->downloaded;
+					$ResponseBuffer ['incomplete'] = Tracker_Data::getTorrentLeechCount ( $torrent );
+					$buffer [] = strlen ( $torrent->rawHash ) . ':' . $torrent->rawHash . $ResponseBuffer->encode ();
+					
+				// Removed to optimise out stack usage
+				//$Response['files'][$Torrent->RawHash] = new BEncodedDictionary();
+				//$Response['files'][$Torrent->RawHash]['complete'] = Tracker_Data::getTorrentSeedCount($torrent);
+				//$Response['files'][$Torrent->RawHash]['downloaded'] = $Torrent->downloaded;
+				//$Response['files'][$Torrent->RawHash]['incomplete'] = Tracker_Data::getTorrentLeechCount($torrent);
 				}
-				return 'd5:filesd'.implode('', $Buffer).'ee';
-			}else{
-				throw new Exception('Full scrape is not permitted');
+				
+				// Faster than $Response->Encode() on the stack - Research possibility of value types on the heap
+				return 'd5:filesd' . implode ( '', $buffer ) . 'ee';
+			} else {
+				throw new Exception ( 'Full scrape is not permitted' );
 			}
 		}
-		return $Response->Encode();
+		return $response->encode ();
 	}
-
-	public function GetIdentifier(){
-		$Identifier = __CLASS__.$this->passkey;
-		if(is_array($this->info_hash)){
-			$Identifier .= implode(null, $this->info_hash);
-		}else{
-			$Idenfier .= $this->info_hash;
+	
+	/**
+	 * Gets a unique hash code representing the request
+	 *
+	 * @return string
+	 */
+	public function getHashCode() {
+		$hash = __CLASS__ . $this->passkey;
+		if (is_array ( $this->info_hash )) {
+			$hash .= implode ( null, $this->info_hash );
+		} else {
+			$hash .= $this->info_hash;
 		}
-		return md5($Identifier);
+		return md5 ( $hash );
 	}
 }
 ?>

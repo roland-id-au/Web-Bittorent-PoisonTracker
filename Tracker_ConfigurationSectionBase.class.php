@@ -1,44 +1,75 @@
 <?php
-class Tracker_ConfigurationSectionBase {
-	private $Values;
+/**
+ * Tracker_ConfigurationSection base class
+ *
+ */
+abstract class Tracker_ConfigurationSectionBase {
+	private $values;
 	
-	public function __construct(array $Values){
-		$this->Values = $Values;
+	/**
+	 * Populates the instance with a dictionary of values represented by the Tracker_ConfigurationSection
+	 *
+	 * @param array $values
+	 */
+	public function __construct(array $values) {
+		$this->values = $values;
 	}
 	
-	final public function __get($Key){
-		if(array_key_exists($Key, $this->Values)){
-			return $this->Values[$Key];
-		}else{
-			throw new Exception('Class '.get_class($this).' does not contain configuration key \''.$Key.'\'');
+	/**
+	 * Overloads getter to access INI sections
+	 *
+	 * @param string $key
+	 * @return string
+	 */
+	final public function __get($key) {
+		if (array_key_exists ( $key, $this->values )) {
+			return $this->values [$key];
+		} else {
+			throw new Exception ( 'Class ' . get_class ( $this ) . ' does not contain configuration key \'' . $key . '\'' );
 		}
 	}
 	
-	final public function GetDelimited($Key, $Delimiter = ',', $SkipEmpty = true, $Trim = true){
-		$ValueString = $this->__get($Key);
-		$Values = explode($Delimiter, $ValueString);
-		if($SkipEmpty){
-			$Buffer = array();
-			foreach($Values as $Value){
-				if($Trim){$Value = trim($Value);}
-				if(!empty($Value)){
-					$Buffer[] = $Value;
+	/**
+	 * Returns a delimited value as an array
+	 *
+	 * @param string $key
+	 * @param string $delimiter
+	 * @param bool $skipEmpty
+	 * @param bool $trim
+	 * @return array
+	 */
+	final public function getDelimited($key, $delimiter = ',', $skipEmpty = true, $trim = true) {
+		$canonicalValue = $this->__get ( $key );
+		$values = explode ( $delimiter, $canonicalValue );
+		if ($skipEmpty) {
+			$buffer = array ();
+			foreach ( $values as $value ) {
+				if ($trim) {
+					$value = trim ( $value );
+				}
+				if (! empty ( $value )) {
+					$buffer [] = $value;
 				}
 			}
-			return $Buffer;
-		}elseif($Trim){
-			$Buffer = array();
-			foreach($Values as $Value){
-				$Buffer[] = trim($Value);
+			return $buffer;
+		} elseif ($trim) {
+			$buffer = array ();
+			foreach ( $values as $value ) {
+				$buffer [] = trim ( $value );
 			}
-			return $Buffer;
-		}else{
-			return $Values;
+			return $buffer;
+		} else {
+			return $values;
 		}
 	}
 	
-	public function Load(array $Values){
-		$this->Values = array_merge($this->Values, $Values);
+	/**
+	 * Loads an dictionary of additional values into this instance
+	 *
+	 * @param array $values
+	 */
+	public function Load(array $values) {
+		$this->values = array_merge ( $this->values, $values );
 	}
 }
 ?>

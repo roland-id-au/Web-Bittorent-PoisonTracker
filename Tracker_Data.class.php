@@ -1,252 +1,414 @@
 <?php
+require_once 'Tracker_Exception.class.php';
+require 'Tracker_Peer.class.php';
+require 'Tracker_Torrent.class.php';
+
+/**
+ * Database layer
+ *
+ */
 class Tracker_Data {
 	
-	public static function GetTorrent($TorrentHash){
-		$Result = mysql_query("SELECT * FROM `Torrents` WHERE `Torrents_Hash` = '".mysql_real_escape_string($TorrentHash)."'");
-		if(!$Result){throw new Tracker_Exception(mysql_error());}
-		if(mysql_num_rows($Result) == 1){
-			$Row = mysql_fetch_object($Result);
-			return new Tracker_Torrent($Row->Torrents_Hash, $Row->Torrents_RawHash, $Row->Torrents_Added, $Row->Torrents_Updated, $Row->Torrents_Downloaded, $Row->Torrents_Double1, $Row->Torrents_Double2, $Row->Torrents_Double3, $Row->Torrents_Double4, $Row->Torrents_Long1);
-		}else{
-			throw new Tracker_Exception("Torrent does not exist");
+	/**
+	 * Fetches the torrent with hash @param $torrentHash
+	 *
+	 * @param string $torrentHash
+	 * @return Tracker_Torrent
+	 */
+	public static function getTorrent($torrentHash) {
+		$result = mysql_query ( "SELECT * FROM `Torrents` WHERE `Torrents_Hash` = '" . mysql_real_escape_string ( $torrentHash ) . "' LIMIT 1" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
+		}
+		if (mysql_num_rows ( $result ) == 1) {
+			$row = mysql_fetch_object ( $result );
+			return new Tracker_Torrent ( $row->Torrents_Hash, $row->Torrents_RawHash, $row->Torrents_Added, $row->Torrents_Updated, $row->Torrents_Downloaded, $row->Torrents_Double1, $row->Torrents_Double2, $row->Torrents_Double3, $row->Torrents_Double4, $row->Torrents_Long1 );
+		} else {
+			throw new Tracker_Exception ( "Torrent does not exist" );
 		}
 	}
 	
-	public static function GetTorrentExists($TorrentHash){
-		$Result = mysql_query("SELECT * FROM `Torrents` WHERE `Torrents_Hash` = '".mysql_real_escape_string($TorrentHash)."'");
-		if(!$Result){throw new Tracker_Exception(mysql_error());}
-		if(mysql_num_rows($Result) == 1){
+	/**
+	 * Checks whether the torrent with hash @param $torrentHash is associated with the tracker
+	 *
+	 * @param string $torrentHash
+	 * @return bool
+	 */
+	public static function getTorrentExists($torrentHash) {
+		$result = mysql_query ( "SELECT * FROM `Torrents` WHERE `Torrents_Hash` = '" . mysql_real_escape_string ( $torrentHash ) . "' LIMIT 1" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
+		}
+		if (mysql_num_rows ( $result ) == 1) {
 			return true;
-		}else{
+		} else {
 			return false;
 		}
 	}
 	
-	public static function GetTorrents(){
-		$Torrents = array();
-		$Result = $Result = mysql_query("SELECT * FROM `Torrents`");
-		if(!$Result){throw new Tracker_Exception(mysql_error());}
-		if(mysql_num_rows($Result) > 0){
-			while($Row = mysql_fetch_object($Result)){
-				$Torrents[] = new Tracker_Torrent($Row->Torrents_Hash, $Row->Torrents_RawHash, $Row->Torrents_Added, $Row->Torrents_Updated, $Row->Torrents_Downloaded, $Row->Torrents_Double1, $Row->Torrents_Double2, $Row->Torrents_Double3, $Row->Torrents_Double4, $Row->Torrents_Long1);
+	/**
+	 * Fetches all torrents associated with the tracker
+	 *
+	 * @return Tracker_Torrent[]
+	 */
+	public static function getTorrents() {
+		$torrents = array ();
+		$result = mysql_query ( "SELECT * FROM `Torrents`" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
+		}
+		if (mysql_num_rows ( $result ) > 0) {
+			while ( $row = mysql_fetch_object ( $result ) ) {
+				$torrents [] = new Tracker_Torrent ( $row->Torrents_Hash, $row->Torrents_RawHash, $row->Torrents_Added, $row->Torrents_Updated, $row->Torrents_Downloaded, $row->Torrents_Double1, $row->Torrents_Double2, $row->Torrents_Double3, $row->Torrents_Double4, $row->Torrents_Long1 );
 			}
 		}
-		return $Torrents;
+		return $torrents;
 	}
 	
-	public static function GetTorrentPeers(Tracker_Torrent $Torrent){
-		$Peers = array();
-		$Result = mysql_query("SELECT * FROM `Peers` WHERE `Torrents_Hash` = '".mysql_real_escape_string($Torrent->Hash)."'");
-		if(!$Result){throw new Tracker_Exception(mysql_error());}
-		if(mysql_num_rows($Result) > 0){
-			while($Row = mysql_fetch_object($Result)){
-				$Peers[] = new Tracker_Peer($Row->Peers_Id, $Row->Peers_RawId, $Row->Torrents_Hash, long2ip($Row->Peers_Ip), $Row->Peers_Port, $Row->Peers_Uploaded, $Row->Peers_Downloaded, $Row->Peers_Left);
+	/**
+	 * Fetches all peers currently associated with the torrent @param $torrent
+	 *
+	 * @param Tracker_Torrent $torrent
+	 * @return unknown
+	 */
+	public static function getTorrentPeers(Tracker_Torrent $torrent) {
+		$peers = array ();
+		$result = mysql_query ( "SELECT * FROM `Peers` WHERE `Torrents_Hash` = '" . mysql_real_escape_string ( $torrent->Hash ) . "'" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
+		}
+		if (mysql_num_rows ( $result ) > 0) {
+			while ( $row = mysql_fetch_object ( $result ) ) {
+				$peers [] = new Tracker_Peer ( $row->Peers_Id, $row->Peers_RawId, $row->Torrents_Hash, long2ip ( $row->Peers_Ip ), $row->Peers_Port, $row->Peers_Uploaded, $row->Peers_Downloaded, $row->Peers_Left );
 			}
 		}
-		return $Peers;
+		return $peers;
 	}
 	
-	public static function GetTorrentSeeds(Tracker_Torrent $Torrent){
-		$Seeds = array();
-		$Result = mysql_query("SELECT * FROM `Peers` WHERE `Torrents_Hash` = '".mysql_real_escape_string($Torrent->Hash)."' AND `Peers_Left` = 0");
-		if(!$Result){throw new Tracker_Exception(mysql_error());}
-		if(mysql_num_rows($Result) > 0){
-			while($Row = mysql_fetch_object($Result)){
-				$Seeds[] = new Tracker_Peer($Row->Peers_Id, $Row->Peers_RawId, $Row->Torrents_Hash, long2ip($Row->Peers_Ip), $Row->Peers_Port, $Row->Peers_Uploaded, $Row->Peers_Downloaded, $Row->Peers_Left);
+	/**
+	 * Fetches all peers currently seeding the torrent @param $torrent
+	 *
+	 * @param Tracker_Torrent $torrent
+	 * @return Tracker_Peer[]
+	 */
+	public static function getTorrentSeeds(Tracker_Torrent $torrent) {
+		$seeders = array ();
+		$result = mysql_query ( "SELECT * FROM `Peers` WHERE `Torrents_Hash` = '" . mysql_real_escape_string ( $torrent->Hash ) . "' AND `Peers_Left` = 0" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
+		}
+		if (mysql_num_rows ( $result ) > 0) {
+			while ( $row = mysql_fetch_object ( $result ) ) {
+				$seeders [] = new Tracker_Peer ( $row->Peers_Id, $row->Peers_RawId, $row->Torrents_Hash, long2ip ( $row->Peers_Ip ), $row->Peers_Port, $row->Peers_Uploaded, $row->Peers_Downloaded, $row->Peers_Left );
 			}
 		}
-		return $Seeds;
+		return $seeders;
 	}
 	
-	public static function GetTorrentLeechers(Tracker_Torrent $Torrent){
-		$Leechers = array();
-		$Result = mysql_query("SELECT * FROM `Peers` WHERE `Torrents_Hash` = '".mysql_real_escape_string($Torrent->Hash)."' AND `Peers_Left` > 0");
-		if(!$Result){throw new Tracker_Exception(mysql_error());}
-		if(mysql_num_rows($Result) > 0){
-			while($Row = mysql_fetch_object($Result)){
-				$Leechers[] = new Tracker_Peer($Row->Peers_Id, $Row->Peers_RawId, $Row->Torrents_Hash, long2ip($Row->Peers_Ip), $Row->Peers_Port, $Row->Peers_Uploaded, $Row->Peers_Downloaded, $Row->Peers_Left);
+	/**
+	 * Fetches all peers currently leeching the torrent @param $torrent
+	 *
+	 * @param Tracker_Torrent $torrent
+	 * @return Tracker_Peer[]
+	 */
+	public static function getTorrentLeechers(Tracker_Torrent $torrent) {
+		$leechers = array ();
+		$result = mysql_query ( "SELECT * FROM `Peers` WHERE `Torrents_Hash` = '" . mysql_real_escape_string ( $torrent->Hash ) . "' AND `Peers_Left` > 0" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
+		}
+		if (mysql_num_rows ( $result ) > 0) {
+			while ( $row = mysql_fetch_object ( $result ) ) {
+				$leechers [] = new Tracker_Peer ( $row->Peers_Id, $row->Peers_RawId, $row->Torrents_Hash, long2ip ( $row->Peers_Ip ), $row->Peers_Port, $row->Peers_Uploaded, $row->Peers_Downloaded, $row->Peers_Left );
 			}
 		}
-		return 	$Leechers;
+		return $leechers;
 	}
 	
-	public static function GetTorrentCount(){
-		$Result = mysql_query("SELECT Count(*) as `TorrentCount` FROM `Torrents`");
-		if(!$Result){throw new Tracker_Exception(mysql_error());}
-		if(mysql_num_rows($Result) > 0){
-			$Row = mysql_fetch_object($Result);
-			return $Row->TorrentCount;
-		}else{
+	/**
+	 * Counts how mayn torrents are currently associated with the tracker
+	 *
+	 * @return int
+	 */
+	public static function getTorrentCount() {
+		$result = mysql_query ( "SELECT Count(*) as `TorrentCount` FROM `Torrents`" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
+		}
+		if (mysql_num_rows ( $result ) > 0) {
+			$row = mysql_fetch_object ( $result );
+			return $row->TorrentCount;
+		} else {
 			return 0;
 		}
 	}
 	
-	public static function GetTorrentPeerCount(Tracker_Torrent $Torrent){
-		$Result = mysql_query("SELECT Count(*) as `PeerCount` FROM `Peers` WHERE `Torrents_Hash` = '".mysql_real_escape_string($Torrent->Hash)."'");
-		if(!$Result){throw new Tracker_Exception(mysql_error());}
-		if(mysql_num_rows($Result) > 0){
-			$Row = mysql_fetch_object($Result);
-			return $Row->PeerCount;
-		}else{
+	/**
+	 * Gets the number of peers currently associated with the torrent @param $torrent
+	 *
+	 * @param Tracker_Torrent $torrent
+	 * @return unknown
+	 */
+	public static function getTorrentPeerCount(Tracker_Torrent $torrent) {
+		$result = mysql_query ( "SELECT Count(*) as `PeerCount` FROM `Peers` WHERE `Torrents_Hash` = '" . mysql_real_escape_string ( $torrent->Hash ) . "'" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
+		}
+		if (mysql_num_rows ( $result ) > 0) {
+			$row = mysql_fetch_object ( $result );
+			return $row->PeerCount;
+		} else {
 			return 0;
 		}
 	}
 	
-	public static function GetTorrentSeedCount(Tracker_Torrent $Torrent){
-		$Result = mysql_query("SELECT Count(*) as `PeerCount` FROM `Peers` WHERE `Torrents_Hash` = '".mysql_real_escape_string($Torrent->Hash)."' AND `Peers_Left` = 0");
-		if(!$Result){throw new Tracker_Exception(mysql_error());}
-		if(mysql_num_rows($Result) > 0){
-			$Row = mysql_fetch_object($Result);
-			return $Row->PeerCount;
-		}else{
+	/**
+	 * Gets the number of peers currently seeding the torrent @param $torrent
+	 *
+	 * @param Tracker_Torrent $torrent
+	 * @return int
+	 */
+	public static function getTorrentSeedCount(Tracker_Torrent $torrent) {
+		$result = mysql_query ( "SELECT Count(*) as `PeerCount` FROM `Peers` WHERE `Torrents_Hash` = '" . mysql_real_escape_string ( $torrent->Hash ) . "' AND `Peers_Left` = 0" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
+		}
+		if (mysql_num_rows ( $result ) > 0) {
+			$row = mysql_fetch_object ( $result );
+			return $row->PeerCount;
+		} else {
 			return 0;
 		}
 	}
 	
-	public static function GetTorrentLeechCount(Tracker_Torrent $Torrent){
-		$Result = mysql_query("SELECT Count(*) as `PeerCount` FROM `Peers` WHERE `Torrents_Hash` = '".mysql_real_escape_string($Torrent->Hash)."' AND `Peers_Left` > 0");
-		if(!$Result){throw new Tracker_Exception(mysql_error());}
-		if(mysql_num_rows($Result) > 0){
-			$Row = mysql_fetch_object($Result);
-			return $Row->PeerCount;
-		}else{
+	/**
+	 * Gets teh number of leechers currently associated with the torrent @param $torrent
+	 *
+	 * @param Tracker_Torrent $torrent
+	 * @return int
+	 */
+	public static function getTorrentLeechCount(Tracker_Torrent $torrent) {
+		$result = mysql_query ( "SELECT Count(*) as `PeerCount` FROM `Peers` WHERE `Torrents_Hash` = '" . mysql_real_escape_string ( $torrent->Hash ) . "' AND `Peers_Left` <> 0" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
+		}
+		if (mysql_num_rows ( $result ) > 0) {
+			$row = mysql_fetch_object ( $result );
+			return $row->PeerCount;
+		} else {
 			return 0;
 		}
 	}
 	
-	public static function GetTorrentDownloadedCount(Tracker_Torrent $Torrent){
-		$Result = mysql_query("SELECT * FROM `Torrents` WHERE `Torrents_Hash` = '".mysql_real_escape_string($Torrent->Hash)."'");
-		if(!$Result){throw new Tracker_Exception(mysql_error());}
-		if(mysql_num_rows($Result) == 1){
-			$Row = mysql_fetch_object($Result);
-			return $Row->Downloads;
-		}else{
+	/**
+	 * Get the number of times the torrent @param $torrent has been downloaded
+	 *
+	 * @param Tracker_Torrent $torrent
+	 * @return unknown
+	 */
+	public static function getTorrentDownloadedCount(Tracker_Torrent $torrent) {
+		$result = mysql_query ( "SELECT * FROM `Torrents` WHERE `Torrents_Hash` = '" . mysql_real_escape_string ( $torrent->Hash ) . "' LIMIT 1" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
+		}
+		if (mysql_num_rows ( $result ) == 1) {
+			$row = mysql_fetch_object ( $result );
+			return $row->Downloads;
+		} else {
 			return 0;
 		}
 	}
 	
-	public static function GetTorrentAuthorised($TorrentHash){
-		$Result = mysql_query("SELECT * FROM `Authorisation` WHERE `Torrents_Hash` = BINARY '".mysql_real_escape_string($TorrentHash)."'");
-		if(!$Result){throw new Tracker_Exception(mysql_error());}
-		if(mysql_num_rows($Result) > 0){
+	/**
+	 * Checks whether the torrent with hash @package $torrentHash is authorised for usage with the tracker
+	 *
+	 * @param string $torrentHash
+	 * @return bool
+	 */
+	public static function getTorrentAuthorised($torrentHash) {
+		$result = mysql_query ( "SELECT * FROM `Authorisation` WHERE `Torrents_Hash` = '" . mysql_real_escape_string ( $torrentHash ) . "' LIMIT 1" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
+		}
+		if (mysql_num_rows ( $result ) > 0) {
 			return true;
-		}else{
+		} else {
 			return false;
 		}
 	}
 	
-	public static function SetTorrentAuthorised($TorrentHash){
-		if(!self::GetTorrentAuthorised($TorrentHash)){
-			$Result = mysql_query("INSERT INTO `Authorisation` (`Torrents_Hash`) VALUES ('".mysql_real_escape_string($TorrentHash)."')");
-			if(!$Result){throw new Tracker_Exception(mysql_error());}
+	public static function setTorrentAuthorised($torrentHash) {
+		if (! self::getTorrentAuthorised ( $torrentHash )) {
+			$result = mysql_query ( "INSERT INTO `Authorisation` (`Torrents_Hash`) VALUES ('" . mysql_real_escape_string ( $torrentHash ) . "')" );
+			if (! $result) {
+				throw new Tracker_Exception ( mysql_error () );
+			}
 		}
 	}
 	
-	public static function SetTorrent(Tracker_Torrent $Torrent){
-		if(self::GetTorrentExists($Torrent->Hash)){
-			$Sql = "UPDATE `Torrents` SET 
-						`Torrents_Downloaded` = '".mysql_real_escape_string($Torrent->Downloaded)."',
-						`Torrents_Double1` = '".mysql_real_escape_string($Torrent->Double1)."',
-						`Torrents_Double2` = '".mysql_real_escape_string($Torrent->Double2)."',
-						`Torrents_Double3` = '".mysql_real_escape_string($Torrent->Double3)."',
-						`Torrents_Double4` = '".mysql_real_escape_string($Torrent->Double4)."',
-						`Torrents_Long1` = '".mysql_real_escape_string($Torrent->Long1)."' 
-				    WHERE `Torrents`.`Torrents_Hash` = '".mysql_real_escape_string($Torrent->Hash)."' LIMIT 1";
-		}else{
-			$Sql = "INSERT INTO `Torrents` 
+	/**
+	 * Sets the torrent @param $torrent
+	 *
+	 * @param Tracker_Torrent $torrent
+	 */
+	public static function setTorrent(Tracker_Torrent $torrent) {
+		if (self::getTorrentExists ( $torrent->Hash )) {
+			$sql = "UPDATE `Torrents` SET 
+						`Torrents_Downloaded` = '" . mysql_real_escape_string ( $torrent->downloaded ) . "',
+				    WHERE `Torrents`.`Torrents_Hash` = '" . mysql_real_escape_string ( $torrent->hash ) . "' LIMIT 1";
+		} else {
+			$sql = "INSERT INTO `Torrents` 
 						(
 						`Torrents_Hash` ,
 						`Torrents_RawHash` ,
 						`Torrents_Added` ,
 						`Torrents_Updated` ,
 						`Torrents_Downloaded` ,
-						`Torrents_Double1` ,
-						`Torrents_Double2` ,
-						`Torrents_Double3` ,
-						`Torrents_Double4` ,
-						`Torrents_Long1` 
 						)
 						VALUES (
-						'".mysql_real_escape_string($Torrent->Hash)."', 
-						'".mysql_real_escape_string($Torrent->RawHash)."',
+						'" . mysql_real_escape_string ( $torrent->hash ) . "', 
+						'" . mysql_real_escape_string ( $torrent->rawHash ) . "',
 						NOW(), 
 						NOW(), 
 						'0', 
-						'".mysql_real_escape_string($Torrent->Double1)."', 
-						'".mysql_real_escape_string($Torrent->Double2)."', 
-						'".mysql_real_escape_string($Torrent->Double3)."', 
-						'".mysql_real_escape_string($Torrent->Double4)."', 
-						'".mysql_real_escape_string($Torrent->Long1)."'
 						)";
 		}
-		$Result = mysql_query($Sql);
-		try{
-			if(!$Result){throw new Tracker_Exception(mysql_error());}
-		}catch(Exception $e){
+		$result = mysql_query ( $sql );
+		try {
+			if (! $result) {
+				throw new Tracker_Exception ( mysql_error () );
+			}
+		} catch ( Exception $e ) {
 			// ignore
 		}
 	}
 	
-	public static function RemoveTorrent(Tracker_Torrent $Torrent){
-		$Result = mysql_query("DELETE FROM `Torrents` WHERE `Torrents_Hash` = '".mysql_real_escape_string($Torrent->Hash)."' LIMIT 1");
-		if(!$Result){throw new Tracker_Exception(mysql_error());}}
-	
-	public static function GetPeer($PeerId, $TorrentHash){
-		$Result = mysql_query("SELECT * FROM `Peers` WHERE `Peers_Id` = '".mysql_real_escape_string($PeerId)."' AND `Torrents_Hash` = '".mysql_real_escape_string($TorrentHash)."'");
-		if(!$Result){throw new Tracker_Exception(mysql_error());}
-		if(mysql_num_rows($Result) == 1){
-			$Row = mysql_fetch_object($Result);
-			return new Tracker_Peer($Row->Peers_Id, $Row->Peers_RawId, $Row->Torrents_Hash, long2ip($Row->Peers_Ip), $Row->Peers_Port, $Row->Peers_Uploaded, $Row->Peers_Downloaded, $Row->Peers_Left);
-		}else{
-			throw new Tracker_Exception("Peer does not exist");
+	/**
+	 * Removes the torrent @param $torrent from the tracker
+	 *
+	 * @param Tracker_Torrent $torrent
+	 */
+	public static function removeTorrent(Tracker_Torrent $torrent) {
+		$result = mysql_query ( "DELETE FROM `Torrents` WHERE `Torrents_Hash` = '" . mysql_real_escape_string ( $torrent->hash ) . "' LIMIT 1" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
 		}
 	}
 	
-	public static function GetPeerExists($PeerId, $TorrentHash){
-		$Result = mysql_query("SELECT * FROM `Peers` WHERE `Peers_Id` = '".mysql_real_escape_string($PeerId)."' AND `Torrents_Hash` = '".mysql_real_escape_string($TorrentHash)."'");
-		if(!$Result){throw new Tracker_Exception(mysql_error());}
-		if(mysql_num_rows($Result) == 1){
+	/**
+	 * Fetches the torrent peer matching @param $peerId for the torrent with hash @param $torrentHash
+	 *
+	 * @param string $peerId
+	 * @param string $torrentHash
+	 * @return Tracker_Peer
+	 */
+	public static function getPeer($peerId, $torrentHash) {
+		$result = mysql_query ( "SELECT * FROM `Peers` WHERE `Peers_Id` = '" . mysql_real_escape_string ( $peerId ) . "' AND `Torrents_Hash` = '" . mysql_real_escape_string ( $torrentHash ) . "' LIMIT 1" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
+		}
+		if (mysql_num_rows ( $result ) == 1) {
+			$row = mysql_fetch_object ( $result );
+			return new Tracker_Peer ( $row->Peers_Id, $row->Peers_RawId, $row->Torrents_Hash, long2ip ( $row->Peers_Ip ), $row->Peers_Port, $row->Peers_Uploaded, $row->Peers_Downloaded, $row->Peers_Left );
+		} else {
+			throw new Tracker_Exception ( "Peer does not exist" );
+		}
+	}
+	
+	/**
+	 * Checks whether the torrent peer with @param $peerId exists for the torrent with hash @param $torrentHash
+	 *
+	 * @param string $peerId
+	 * @param string $torrentHash
+	 * @return bool
+	 */
+	public static function getPeerExists($peerId, $torrentHash) {
+		$result = mysql_query ( "SELECT * FROM `Peers` WHERE `Peers_Id` = '" . mysql_real_escape_string ( $peerId ) . "' AND `Torrents_Hash` = '" . mysql_real_escape_string ( $torrentHash ) . "' LIMIT 1" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
+		}
+		if (mysql_num_rows ( $result ) == 1) {
 			return true;
-		}else{
+		} else {
 			return false;
 		}
 	}
 	
-	public static function GetPeers(){
-		$Peers = array();
-		$Result = mysql_query("SELECT * FROM `Peers`");
-		if(!$Result){throw new Tracker_Exception(mysql_error());}
-		if(mysql_num_rows($Result) > 0){
-			while($Row = mysql_fetch_object($Result)){
-				$Peers[] = new Tracker_Peer($Row->Peers_Id, $Row->Peers_RawId, long2ip($row->Peers_Ip), $row->Peers_Port, $Row->Peers_Uploaded, $Row->Peers_Left);
-			}
+	/**
+	 * Fetches the torrent peer with ip @param $ip for the torrent @param $torrent
+	 *
+	 * @param Tracker_Torrent $torrent
+	 * @param string $ip
+	 * @return Tracker_Peer
+	 */
+	public static function getPeerByNetwork(Tracker_Torrent $torrent, $ip) {
+		$result = mysql_query ( "SELECT * FROM `Peers` WHERE `Peers_Ip` = '" . mysql_real_escape_string ( ip2long ( $ip ) ) . "' AND `Torrents_Hash` = '" . mysql_real_escape_string ( $torrent->Hash ) . "' LIMIT 1" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
 		}
-		return $Peers;
+		if (mysql_num_rows ( $result ) == 1) {
+			$row = mysql_fetch_object ( $result );
+			return new Tracker_Peer ( $row->Peers_Id, $row->Peers_RawId, $row->Torrents_Hash, long2ip ( $row->Peers_Ip ), $row->Peers_Port, $row->Peers_Uploaded, $row->Peers_Downloaded, $row->Peers_Left );
+		} else {
+			throw new Tracker_Exception ( "Peer does not exist" );
+		}
 	}
 	
-	public static function GetPeerTorrents(Tracker_Peer $Peer){
-		$Torrents = array();
-		$Result = mysql_query("SELECT * FROM `Torrents` WHERE `Torrents_Hash` IN(SELECT `Torrents_Hash` FROM `Peers` WHERE `Peers`.`Peers_Id` = '".mysql_real_escape_string($Peer->Id)."')");
-		if(!$Result){throw new Tracker_Exception(mysql_error());}
-		if(mysql_num_rows($Result) > 0){
-			while($Row = mysql_fetch_object($Result)){
-				$Torrents[] = new Tracker_Torrent($Row->Torrents_Hash, $Row->Torrents_RawHash, $Row->Torrents_Added, $Row->Torrents_Updated, $Row->Torrents_Downloaded, $Row->Torrents_Double1, $Row->Torrents_Double2, $Row->Torrents_Double3, $Row->Torrents_Double4, $Row->Torrents_Long1);
+	/**
+	 * Fetches all peers currently associated with the tracker
+	 *
+	 * @return Tracker_Peer[]
+	 */
+	public static function getPeers() {
+		$peers = array ();
+		$result = mysql_query ( "SELECT * FROM `Peers`" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
+		}
+		if (mysql_num_rows ( $result ) > 0) {
+			while ( $row = mysql_fetch_object ( $result ) ) {
+				$peers [] = new Tracker_Peer ( $row->Peers_Id, $row->Peers_RawId, long2ip ( $row->Peers_Ip ), $row->Peers_Port, $row->Peers_Uploaded, $row->Peers_Left );
 			}
 		}
-		return $Torrents;
+		return $peers;
 	}
 	
-	public static function SetPeer(Tracker_Peer $Peer){
-		if(self::GetPeerExists($Peer->Id, $Peer->TorrentHash)){
-			$Sql = "UPDATE `Peers` SET 
-						`Peers_Ip` = '".mysql_real_escape_string(ip2long($Peer->Ip))."',
-						`Peers_Port` = '".mysql_real_escape_string($Peer->Port)."',
-						`Peers_Uploaded` = '".mysql_real_escape_string($Peer->Uploaded)."',
-						`Peers_Downloaded` = '".mysql_real_escape_string($Peer->Downloaded)."',
-						`Peers_Left` = '".mysql_real_escape_string($Peer->Left)."' 
-					WHERE `Peers_Id` = '".mysql_real_escape_string($Peer->Id)."' AND `Torrents_Hash` = '".mysql_real_escape_string($Peer->TorrentHash)."' LIMIT 1";
-		}else{
-			$Sql = "INSERT INTO `Peers` (
+	/**
+	 * Fetches all torrents the peer @param $peer is currently associated with
+	 *
+	 * @param Tracker_Peer $peer
+	 * @return Tracker_Torrent[]
+	 */
+	public static function getPeerTorrents(Tracker_Peer $peer) {
+		$torrents = array ();
+		$result = mysql_query ( "SELECT * FROM `Torrents` WHERE `Torrents_Hash` IN(SELECT `Torrents_Hash` FROM `Peers` WHERE `Peers`.`Peers_Id` = '" . mysql_real_escape_string ( $peer->Id ) . "')" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
+		}
+		if (mysql_num_rows ( $result ) > 0) {
+			while ( $row = mysql_fetch_object ( $result ) ) {
+				$torrents [] = new Tracker_Torrent ( $row->Torrents_Hash, $row->Torrents_RawHash, $row->Torrents_Added, $row->Torrents_Updated, $row->Torrents_Downloaded, $row->Torrents_Double1, $row->Torrents_Double2, $row->Torrents_Double3, $row->Torrents_Double4, $row->Torrents_Long1 );
+			}
+		}
+		return $torrents;
+	}
+	
+	/**
+	 * Sets the peer @param $peer
+	 *
+	 * @param Tracker_Peer $peer
+	 */
+	public static function setPeer(Tracker_Peer $peer) {
+		if (self::getPeerExists ( $peer->id, $peer->torrentHash )) {
+			$sql = "UPDATE `Peers` SET 
+						`Peers_Ip` = '" . mysql_real_escape_string ( ip2long ( $peer->ip ) ) . "',
+						`Peers_Port` = '" . mysql_real_escape_string ( $peer->port ) . "',
+						`Peers_Uploaded` = '" . mysql_real_escape_string ( $peer->uploaded ) . "',
+						`Peers_Downloaded` = '" . mysql_real_escape_string ( $peer->downloaded ) . "',
+						`Peers_Left` = '" . mysql_real_escape_string ( $peer->left ) . "' 
+					WHERE `Peers_Id` = '" . mysql_real_escape_string ( $peer->id ) . "' AND `Torrents_Hash` = '" . mysql_real_escape_string ( $peer->torrentHash ) . "' LIMIT 1";
+		} else {
+			$sql = "INSERT INTO `Peers` (
 						`Peers_Id` ,
 						`Peers_RawId` ,
 						`Torrents_Hash`,
@@ -259,36 +421,55 @@ class Tracker_Data {
 						`Peers_Left` 
 						)
 						VALUES (
-						'".mysql_real_escape_string($Peer->Id)."',
-						'".mysql_real_escape_string($Peer->RawId)."',
-						'".mysql_real_escape_string($Peer->TorrentHash)."', 
-						'".mysql_real_escape_string(ip2long($Peer->Ip))."', 
-						'".mysql_real_escape_string($Peer->Port)."', 
+						'" . mysql_real_escape_string ( $peer->id ) . "',
+						'" . mysql_real_escape_string ( $peer->rawId ) . "',
+						'" . mysql_real_escape_string ( $peer->torrentHash ) . "', 
+						'" . mysql_real_escape_string ( ip2long ( $peer->ip ) ) . "', 
+						'" . mysql_real_escape_string ( $peer->port ) . "', 
 						NOW(), 
 						NOW(), 
-						'".mysql_real_escape_string($Peer->Uploaded)."', 
-						'".mysql_real_escape_string($Peer->Downloaded)."', 
-						'".mysql_real_escape_string($Peer->Left)."'
+						'" . mysql_real_escape_string ( $peer->uploaded ) . "', 
+						'" . mysql_real_escape_string ( $peer->downloaded ) . "', 
+						'" . mysql_real_escape_string ( $peer->left ) . "'
 				   )";
 		}
-		$Result = mysql_query($Sql);
-		try{
-			if(!$Result){throw new Tracker_Exception(mysql_error());}
-		}catch(Exception $e){
+		$result = mysql_query ( $sql );
+		try {
+			if (! $result) {
+				throw new Tracker_Exception ( mysql_error () );
+			}
+		} catch ( Exception $e ) {
 			// ignore
 		}
 	}
 	
-	public static function RemovePeer(Tracker_Peer $Peer){
-		$Result = mysql_query("DELETE FROM `Peers` WHERE `Peers_Id` = '".mysql_real_escape_string($Peer->Id)."' AND `Torrents_Hash` = '".mysql_real_escape_string($Peer->TorrentHash)."' LIMIT 1");
-		if(!$Result){throw new Tracker_Exception(mysql_error());}
+	/**
+	 * Removes the peer @param $peer from all torrents on the tracker
+	 *
+	 * @param Tracker_Peer $peer
+	 */
+	public static function removePeer(Tracker_Peer $peer) {
+		$result = mysql_query ( "DELETE FROM `Peers` WHERE `Peers_Id` = '" . mysql_real_escape_string ( $peer->id ) . "' AND `Torrents_Hash` = '" . mysql_real_escape_string ( $peer->torrentHash ) . "' LIMIT 1" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
+		}
 	}
 	
-	public static function Update($TorrentLifeTime, $PeerLifeTime){
-		$Result = mysql_query("DELETE FROM `Torrents` WHERE UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(`Torrents_Updated`) > $TorrentLifeTime");
-		if(!$Result){throw new Tracker_Exception(mysql_error());}
-		$Result = mysql_query("DELETE FROM `Peers` WHERE UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(`Peers_Updated`) > $PeerLifeTime");
-		if(!$Result){throw new Tracker_Exception(mysql_error());}
+	/**
+	 * Removes expired peers and torrents from the tracker
+	 *
+	 * @param int $torrentLifetime
+	 * @param int $peerLifetime
+	 */
+	public static function update($torrentLifetime, $peerLifetime) {
+		$result = mysql_query ( "peerLifetime$torrentLifetime" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
+		}
+		$result = mysql_query ( "DELETE FROM `Peers` WHERE UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(`Peers_Updated`) > $peerLifetime" );
+		if (! $result) {
+			throw new Tracker_Exception ( mysql_error () );
+		}
 	}
 }
 ?>

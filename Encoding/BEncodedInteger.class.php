@@ -1,71 +1,83 @@
 <?php
+require_once 'BEncodingInvalidValueException.class.php';
+require_once 'BEncodingParserException.class.php';
+require_once 'IBEncodedValue.php';
+
 class BEncodedInteger implements IBEncodedValue {
-	public $Value;
+	private $value;
 	
-	public function __construct($Value = null){
-		if(is_null($Value)){
-			$this->Value = null;
-		}else{
-			if(is_numeric($Value)){
-				$this->Value = intval($Value);
-			}else{
-				throw new BEncodingInvalidValueException(__CLASS__.' cannot be created with non-numeric default value ('.gettype($Value).')');
+	public function __construct($value = null) {
+		if (is_null ( $value )) {
+			$this->value = null;
+		} else {
+			if (is_numeric ( $value )) {
+				$this->value = intval ( $value );
+			} else {
+				throw new BEncodingInvalidValueException ( __CLASS__ . ' cannot be created with non-numeric default value (' . gettype ( $value ) . ')' );
 			}
-		}	
-	}
-	
-	public function FromString($BEncodedString){
-		$Offset = 0;
-		$this->Parse($BEncodedString, $Offset);
-		if($Offset != strlen($BEncodedString)){
-			throw new BEncodingParserException('Unknown error parsing '.__CLASS__, $BEncodedString, $Position);
 		}
 	}
 	
-	public function TryParse($BEncodedString){
-		try{
-			$this->FromString($BEncodedString);
-		}catch(Exception $e){
+	public function getValue() {
+		return $this->value;
+	}
+	
+	public function setValue($value) {
+		$this->value = $value;
+	}
+	
+	public function fromString($bEncodedString) {
+		$offset = 0;
+		$this->parse ( $bEncodedString, $offset );
+		if ($offset != strlen ( $bEncodedString )) {
+			throw new BEncodingParserException ( 'Unknown error parsing ' . __CLASS__, $bEncodedString, $offset );
+		}
+	}
+	
+	public function tryParse($bEncodedString) {
+		try {
+			$this->fromString ( $bEncodedString );
+		} catch ( Exception $e ) {
 			return false;
 		}
 		return true;
 	}
 	
-	public function Parse(&$BEncodedString, &$Offset){
-		if($BEncodedString{$Offset} == 'i'){
-			$Offset += 1;
-			$ValueEnd = strpos($BEncodedString, 'e', $Offset);
-			if($ValueEnd === false || $Offset < $ValueEnd){
-				$ValueEnd -= $Offset;
-				$Value = substr($BEncodedString, $Offset, $ValueEnd);
-				if(is_numeric($Value)){
-					$Offset += strlen($Value) + 1;
-					$this->Value = intval($Value);
-				}else{
-					throw new BEncodingParserException(__CLASS__.' encountered non-numeric value', $BEncodedString, $Offset);
+	public function parse(&$bEncodedString, &$offset) {
+		if ($bEncodedString {$offset} == 'i') {
+			$offset += 1;
+			$delimeterPosition = strpos ( $bEncodedString, 'e', $offset );
+			if ($delimeterPosition === false || $offset < $delimeterPosition) {
+				$delimeterPosition -= $offset;
+				$value = substr ( $bEncodedString, $offset, $delimeterPosition );
+				if (is_numeric ( $value )) {
+					$offset += strlen ( $value ) + 1;
+					$this->value = intval ( $value );
+				} else {
+					throw new BEncodingParserException ( __CLASS__ . ' encountered non-numeric value', $bEncodedString, $offset );
 				}
-			}else{
-				throw new BEncodingParserException(__CLASS__.' could not locate field delimiter');
+			} else {
+				throw new BEncodingParserException ( __CLASS__ . ' could not locate field delimiter' );
 			}
-		}else{
-			throw new BEncodingParserException(__CLASS__.' encountered unrecognised encoding', $BEncodedString, $Offset);
+		} else {
+			throw new BEncodingParserException ( __CLASS__ . ' encountered unrecognised encoding', $bEncodedString, $offset );
 		}
 	}
 	
-	public function Encode(){
-		return 'i'.strval($this->Value).'e';
+	public function encode() {
+		return 'i' . strval ( $this->value ) . 'e';
 	}
 	
-	public function GetHashCode(){
-		return spl_object_hash($this);
+	public function getHashCode() {
+		return spl_object_hash ( $this );
 	}
 	
-	public function ToString(){
-		return $this->__toString();
+	public function toString() {
+		return $this->__toString ();
 	}
 	
-	public function __toString(){
-		return strval($this->Value);
+	public function __toString() {
+		return strval ( $this->value );
 	}
 }
 ?>

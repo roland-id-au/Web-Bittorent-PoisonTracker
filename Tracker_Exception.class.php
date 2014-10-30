@@ -1,3 +1,8 @@
 <?php
-class Tracker_Exception extends Exception {};
+/**
+ * Tracker exception
+ *
+ */
+class Tracker_Exception extends Exception {
+}
 ?>

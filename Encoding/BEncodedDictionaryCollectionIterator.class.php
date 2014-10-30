@@ -1,33 +1,33 @@
 <?php
 class BEncodedDictionaryCollectionIterator implements Iterator {
-	private $Keys;
-	private $Values;
-	private $Position;
+	private $keys;
+	private $values;
+	private $position;
 	
-	public function __construct($Keys, $Values){
-		$this->Keys = $Keys;
-		$this->Values = $Values;
-		$this->Position = 0;
+	public function __construct($keys, $values) {
+		$this->keys = $keys;
+		$this->values = $values;
+		$this->position = 0;
 	}
 	
-	public function rewind(){
-		reset($this->Values);
+	public function rewind() {
+		reset ( $this->values );
 	}
 	
-	public function current(){
-		return current($this->Values);
+	public function current() {
+		return current ( $this->values );
 	}
 	
-	public function key(){
-		return $this->Keys[key($this->Values)]->ToString();
+	public function key() {
+		return $this->keys [key ( $this->values )]->toString ();
 	}
 	
-	public function next(){
-		return next($this->Values);
+	public function next() {
+		return next ( $this->values );
 	}
 	
-	public function valid(){
-		return $this->current() == false ? false : true;
+	public function valid() {
+		return $this->current () == false ? false : true;
 	}
 }
 ?>
